@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  tg-disk:
+    image: tg-disk  # 使用本地的 tg-disk 镜像
+    build: .  # 如果你有 Dockerfile，可以通过 build 构建镜像（如果没有，可以去掉这一行）
+    ports:
+      - "3000:3000"  # 映射容器端口 3000 到主机端口 3000
+    env_file:
+      - .env  # 引用 .env 文件来设置环境变量
+    restart: always  # 如果容器停止，将自动重启
+    volumes:
+      - ./data:/data  # 可以根据需要挂载数据目录，确保数据持久化
