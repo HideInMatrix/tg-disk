@@ -14,9 +14,12 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      tgToken: process.env.NUXT_PUBLIC_TG_BOT_TOKEN,
+      auth: {
+        loadStrategy: "client-only",
+      },
+      tgToken: process.env.NUXT_PUBLIC_TG_TOKEN,
       tgChatId: process.env.NUXT_PUBLIC_TG_CHAT_ID,
-      allowHosts: process.env.NUXT_PUBLIC_TG_ALLOW_WEBSITE,
+      allowHosts: process.env.NUXT_PUBLIC_ALLOW_HOSTS,
       account: process.env.NUXT_PUBLIC_ACCOUNT,
       password: process.env.NUXT_PUBLIC_PASSWORD,
     },
