@@ -6,7 +6,6 @@ export default defineEventHandler(async (event) => {
     // 1. 读取表单数据
     const body = await readFormData(event);
     const config = useRuntimeConfig();
-    console.log("我的配置", config);
 
     const chat_id = (body.get("chatId")?.toString() ?? "").trim();
     const functionType = (body.get("functionType") as string) ?? "document";
