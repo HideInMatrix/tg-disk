@@ -9,8 +9,8 @@ export default defineEventHandler((event) => {
     
     const host = headers['host'];
     const allowHosts = [...config.public.allowHosts.split(",")]
-    console.log("白名单域名",allowHosts)
-    console.log("访问检测",(allowHosts.length > 0) && event.path.startsWith('/file') && (!!!host || !allowHosts.includes(host!)))
+    console.log("白名单域名",allowHosts,"当前域名",host)
+    console.log("访问检测",(allowHosts.length > 0) , event.path.startsWith('/file') , !!!host , !allowHosts.includes(host!))
     // 只有设置了白名单才允许进行检测
     if ((allowHosts.length > 0) && event.path.startsWith('/file') && (!!!host || !allowHosts.includes(host!))) {
         const filePath = join(process.cwd(), 'public/placeholder.svg');
