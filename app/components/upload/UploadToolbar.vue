@@ -57,7 +57,7 @@ const innerUploadType = computed({
           <TabsTrigger value="telegram">
             中心化
           </TabsTrigger>
-          <TabsTrigger value="ipfs">
+          <TabsTrigger value="ipfs" disable>
             去中心化
           </TabsTrigger>
         </TabsList>

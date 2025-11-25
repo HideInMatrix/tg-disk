@@ -11,7 +11,7 @@ export default defineEventHandler((event) => {
     const allowHosts = [...config.public.allowHosts.split(",")]
 
     // 只有设置了白名单才允许进行检测
-    if (config.public.allowHosts && event.path.startsWith('/file') && (!host || !allowHosts.includes(host))) {
+    if ((allowHosts.length > 0) && event.path.startsWith('/file') && (!!!host || !allowHosts.includes(host!))) {
         const filePath = join(process.cwd(), 'public/placeholder.svg');
         setHeader(event, "Content-Type", "image/svg+xml");
         setHeader(event, "Cache-Control", "public, max-age=86400000"); // Cache for 1 day
