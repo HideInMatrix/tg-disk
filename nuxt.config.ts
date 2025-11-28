@@ -22,6 +22,7 @@ export default defineNuxtConfig({
       allowHosts: process.env.NUXT_PUBLIC_ALLOW_HOSTS,
       account: process.env.NUXT_PUBLIC_ACCOUNT,
       password: process.env.NUXT_PUBLIC_PASSWORD,
+      allowReferers: process.env.NUXT_PUBLIC_ALLOW_REFERERS,
     },
   },
   shadcn: {
