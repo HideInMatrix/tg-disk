@@ -59,7 +59,7 @@ export default defineEventHandler(async (event) => {
     const contentType = getMimeType(fileName) || response.headers["content-type"]
 
     setHeader(event, "Content-Type", contentType);
-    setHeader(event, "Cache-Control", "public, max-age=86400000"); // Cache for 1 day
+    setHeader(event, "Cache-Control", "public, max-age=10"); // Cache for 1 day
 
     // 流式传输：直接将 Telegram 文件流发送给客户端
     return sendStream(event, response.data) // 关键: 流式传输
