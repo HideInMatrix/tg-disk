@@ -9,6 +9,7 @@ export default defineEventHandler((event) => {
   const host = headers["host"];
   const allowHosts = config.public.allowHosts?.split(",") || [];
   // 只有设置了白名单才允许进行检测
+  console.log(!!config.public.allowHosts,event.path.startsWith("/file"),host,!allowHosts.includes(host!))
   if (
     !!config.public.allowHosts &&
     event.path.startsWith("/file") &&
