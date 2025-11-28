@@ -38,7 +38,7 @@ export default defineEventHandler((event) => {
       refererAllowed = allowReferers.includes(refererHost)
     } catch {
       // 没有 referer 或格式错误，当成不合法（你也可以改成放行）
-      refererAllowed = false
+      refererAllowed = true
     }
   }
 
