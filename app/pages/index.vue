@@ -28,10 +28,6 @@ const handleLogout = async () => {
       <FileUpload :extra-form-data="uploadExtraFormData" :multiple="true">
         <FileUploadGrid />
       </FileUpload>
-
-      <img
-        src="http://localhost:3000/file/AgACAgEAAyEGAASMdUacAAEBhQppEd1pgKWKyNsNSepdqfl4eciT_AAC1QtrG9B3kET9fAynw1G_MwEAAwIAA3cAAzYE"
-        alt="" />
     </div>
   </NuxtLayout>
 </template>
