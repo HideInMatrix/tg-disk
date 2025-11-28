@@ -29,4 +29,9 @@ export default defineNuxtConfig({
     prefix: "",
     componentDir: "./app/components/ui",
   },
+  nitro: {
+    prerender: {
+      autoSubfolderIndex: false,
+    },
+  },
 });
