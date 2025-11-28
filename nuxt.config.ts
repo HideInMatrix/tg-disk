@@ -30,9 +30,10 @@ export default defineNuxtConfig({
     componentDir: "./app/components/ui",
   },
   nitro: {
-    preset: "cloudflare-pages",
-    prerender: {
-      autoSubfolderIndex: false, // 这个是官方建议，匹配 Cloudflare 的路由行为
+    preset: "cloudflare_module",
+    cloudflare: {
+      deployConfig: true,
+      nodeCompat: true,
     },
   },
 });
