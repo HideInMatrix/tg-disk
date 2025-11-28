@@ -1,6 +1,8 @@
 import { createError } from 'h3'
 import { defaultHeaders } from '#imports'
 import axios from "axios"
+import { join } from 'node:path'
+import { createReadStream } from 'node:fs'
 
 function getMimeType(filename: string) {
   const ext = filename.split('.').pop()?.toLowerCase()
@@ -23,43 +25,56 @@ export default defineEventHandler(async (event) => {
   let fileUrl: string | undefined
   let fileName: string = "file"
 
-  if(isFilePath){
+  if (!!isFilePath) {
     fileUrl = `https://telegra.ph/file/${fileId}`
-  }else{
-    // 1) 从 Telegram 获取 file_path（文件在 Telegram 文件服务器上的路径）
-    const infoResp = await axios.get(
-      `https://api.telegram.org/bot${envConfig.public.tgToken}/getFile?file_id=${fileId}`,
-      { method: 'GET', headers: defaultHeaders }
-    )
+  } else {
+    try{
+      // 1) 从 Telegram 获取 file_path（文件在 Telegram 文件服务器上的路径）
+      const infoResp = await axios.get(
+        `https://api.telegram.org/bot${envConfig.public.tgToken}/getFile?file_id=${fileId}`,
+        { method: 'GET', headers: defaultHeaders }
+      )
   
-    if (!infoResp || !infoResp.data) {
-      // 使用 message 而不是 statusMessage，避免 h3 的警告
-      throw createError({ statusCode: 400, message: '无法获取文件信息' })
+      if (!infoResp || !infoResp.data) {
+        // 使用 message 而不是 statusMessage，避免 h3 的警告
+        throw createError({ statusCode: 502, message: '无法获取文件信息' })
+      }
+  
+      const filePath = infoResp.data?.result.file_path
+  
+      if (!filePath) {
+        // 使用 message 而不是 statusMessage，避免 h3 的警告
+        throw createError({ statusCode: 404, message: 'file_path 未找到' })
+      }
+  
+      fileUrl = `https://api.telegram.org/file/bot${envConfig.public.tgToken}/${filePath}`
+  
+      fileName = filePath.split('/').pop() || 'file'
+
+    }catch(e){
+      fileUrl = ``
     }
-  
-    const filePath = infoResp.data?.result.file_path
-  
-    if (!filePath) {
-      // 使用 message 而不是 statusMessage，避免 h3 的警告
-      throw createError({ statusCode: 404, message: 'file_path 未找到' })
-    }
-  
-    fileUrl = `https://api.telegram.org/file/bot${envConfig.public.tgToken}/${filePath}`
-  
-    fileName = filePath.split('/').pop() || 'file'
   }
-  
+
   try {
+    if(!fileUrl){
+        const filePath = join(process.cwd(), 'public/404.webp')
+        setHeader(event, 'Content-Type', 'image/webp')
+        setHeader(event, 'Cache-Control', 'public, max-age=0')
+        return sendStream(event, createReadStream(filePath))
+    }
     const response = await axios.get(fileUrl, {
-      headers:{ ...defaultHeaders, Referer: isFilePath?"https://telegra.ph/":"https://api.telegram.com/" },
+      headers: { ...defaultHeaders, Referer: isFilePath ? "https://telegra.ph/" : "https://api.telegram.com/" },
       responseType: "stream", // Stream to reduce memory usage
     });
-    
+
     // 设置响应头
     const contentType = getMimeType(fileName) || response.headers["content-type"]
 
     setHeader(event, "Content-Type", contentType);
-    setHeader(event, "Cache-Control", "public, max-age=10"); // Cache for 1 day
+    setHeader(event, "Cache-Control", "public, max-age=3600"); // Cache for 1 day
+
+
 
     // 流式传输：直接将 Telegram 文件流发送给客户端
     return sendStream(event, response.data) // 关键: 流式传输
@@ -74,6 +89,6 @@ export default defineEventHandler(async (event) => {
     }
 
     console.error('Telegram 代理接口错误:', err)
-    throw createError({ statusCode: 502, message: 'Bad gateway' })
+    throw createError({ statusCode: err.response?.status || 502, message: 'Bad gateway' })
   }
 })
