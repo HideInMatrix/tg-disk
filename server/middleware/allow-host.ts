@@ -43,12 +43,14 @@ export default defineEventHandler((event) => {
   }
 
   const allowed = hostAllowed && refererAllowed
+  
+  
 
   if (!allowed) {
     // ❌ 不允许访问：返回占位图，或者你也可以直接 403
-    const filePath = join(process.cwd(), 'public/placeholder.svg')
-    setHeader(event, 'Content-Type', 'image/svg+xml')
-    setHeader(event, 'Cache-Control', 'public, max-age=3600')
+    const filePath = join(process.cwd(), 'public/403.webp')
+    setHeader(event, 'Content-Type', 'image/webp')
+    setHeader(event, 'Cache-Control', 'public, max-age=0')
     return sendStream(event, createReadStream(filePath))
   }
 })
