@@ -26,3 +26,8 @@ export interface TelegramAPIService {
   getFilePath(fileId: string): Promise<string | null>;
   getFileContent(fileId: string): Promise<Response>;
 }
+  interface TelegramFileType {
+    type: string;
+    method: string;
+    fileName?: string; // fileName 可能不存在于某些情况中
+  }

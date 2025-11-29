@@ -1,5 +1,9 @@
 import { defaultHeaders } from "~~/server/utils/defaultInfo";
-import { fetchTelegramWithRetry, getFileInfo } from "~~/server/utils/telegram";
+import {
+  fetchTelegramWithRetry,
+  getFileInfo,
+  getTelegramFileType,
+} from "~~/server/utils/telegram";
 import { withUpload } from "~~/server/utils/concurrency";
 
 export default defineEventHandler(async (event) => {
@@ -8,11 +12,18 @@ export default defineEventHandler(async (event) => {
     const config = useRuntimeConfig();
 
     const chat_id = (body.get("chatId")?.toString() ?? "").trim();
-    const functionType = (body.get("functionType") as string) ?? "document";
-    const functionName = body.get("functionName")?.toString();
+
     const file = body.get("file") as Blob | null;
     let fileName = body.get("fileName")?.toString();
     const caption = body.get("caption")?.toString();
+
+    if (!file || !fileName) {
+      throw new Error("文件和文件名不能为空");
+    }
+
+    const fileInfo = getTelegramFileType(fileName);
+    const functionType = fileInfo?.type ?? "document";
+    const functionName = fileInfo?.method ?? "sendDocument";
 
     // 1. 基础校验（尽量早失败，少做无用处理）
     if (!chat_id) throw new Error("chatId 必填");
