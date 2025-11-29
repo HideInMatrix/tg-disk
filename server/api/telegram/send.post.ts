@@ -52,18 +52,13 @@ export default defineEventHandler(async (event) => {
 
     // 4. 限制并发 + 带重试的 Telegram 调用
     const response = await withUpload(() =>
-      fetchTelegramWithRetry(
-        {
-          token: config.public.tgToken,
-          method: functionName!,
-          formData,
-          headers: defaultHeaders,
-          timeout: 20_000,
-        },
-        3,
-        10_000,
-        15_000
-      )
+      fetchTelegramWithRetry({
+        token: config.public.tgToken,
+        method: functionName!,
+        formData,
+        headers: defaultHeaders,
+        timeout: 30_000,
+      })
     );
 
     return {

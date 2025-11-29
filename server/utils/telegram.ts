@@ -17,9 +17,9 @@ interface TelegramOptions {
  */
 export async function fetchTelegramWithRetry(
   options: TelegramOptions,
-  retries = 5, // 总共尝试 3 次（1 次原始 + 2 次重试）
-  minDelayMs = 10000, // 10s
-  maxDelayMs = 15000 // 15s
+  retries = 5,
+  minDelayMs = 30000,
+  maxDelayMs = 45000
 ): Promise<any> {
   let lastError: any;
 

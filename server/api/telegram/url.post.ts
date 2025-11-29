@@ -9,11 +9,18 @@ export default defineEventHandler(async (event) => {
     console.log("我的配置", config.public);
 
     const chat_id = (body.get("chatId")?.toString() ?? "").trim();
-    const functionType = (body.get("functionType") as string) ?? "document";
-    const functionName = body.get("functionName")?.toString();
+
     const file = (body.get("file") as string) ?? ""; // Here, we explicitly cast to Blob | null
     let fileName = body.get("fileName")?.toString();
     const caption = body.get("caption")?.toString();
+
+    if (!file || !fileName) {
+      throw new Error("文件和文件名不能为空");
+    }
+
+    const fileInfo = getTelegramFileType(fileName);
+    const functionType = fileInfo?.type ?? "document";
+    const functionName = fileInfo?.method ?? "sendDocument";
 
     // 2. 基础校验
     if (!chat_id) throw new Error("chatId 必填");
@@ -43,18 +50,13 @@ export default defineEventHandler(async (event) => {
     if (caption) formData.append("caption", caption);
 
     // 5. 调用带重试的 Telegram 接口（默认最多重试 2 次，总共 3 次请求）
-    const response = await fetchTelegramWithRetry(
-      {
-        token: config.public.tgToken,
-        method: functionName,
-        formData,
-        headers: defaultHeaders,
-        timeout: 20_000,
-      },
-      3, // 总尝试次数（可在这里改成 2、4...）
-      10000, // 最小间隔 10s
-      15000 // 最大间隔 15s
-    );
+    const response = await fetchTelegramWithRetry({
+      token: config.public.tgToken,
+      method: functionName,
+      formData,
+      headers: defaultHeaders,
+      timeout: 20_000,
+    });
 
     // 6. 成功返回
     return {
