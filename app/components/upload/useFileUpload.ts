@@ -16,6 +16,7 @@ export interface UploadableFile {
 interface UseFileUploadOptions {
   uploadUrl?: string;
   extraFormData?: Record<string, string>;
+  concurrency?: number; // 最大并发数，默认 3
   onUploaded?: (responses: any[]) => void;
 }
 
@@ -123,6 +124,36 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
     }
   }
 
+  // 并发队列控制
+  const concurrency = ref<number>(options.concurrency ?? 3);
+  const activeCount = ref<number>(0);
+  const queue: Array<() => Promise<void>> = [];
+
+  function setConcurrency(n: number) {
+    concurrency.value = Math.max(1, Math.floor(n));
+    // 触发队列执行，可能有更多插槽
+    runQueue();
+  }
+
+  function runQueue() {
+    // 当还有位置且队列有任务时，取任务执行
+    while (activeCount.value < concurrency.value && queue.length > 0) {
+      const task = queue.shift();
+      if (!task) break;
+      activeCount.value++;
+      // 执行任务，完成后递减 activeCount 并继续执行队列
+      task()
+        .catch(() => {
+          // 错误在任务内部已经标记状态
+        })
+        .finally(() => {
+          activeCount.value--;
+          // 递归执行后续任务
+          runQueue();
+        });
+    }
+  }
+
   // 添加文件
   function addFiles(newRawFiles: File[] | string[]) {
     const newUploadables: UploadableFile[] = [];
@@ -154,14 +185,30 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
     }
     files.value = [...files.value, ...newUploadables];
 
-    // 自动触发上传
-    const promises = newUploadables.map((uFile, index) => {
-      if (uFile.status !== "done") {
-        return uploadSingleFile({ uFile, index });
-      }
+    // 为每个待上传文件建立一个 Promise，用来通知该批次上传完成
+    const settlePromises: Promise<void>[] = [];
+    newUploadables.forEach((uFile) => {
+      if (uFile.status === "done") return;
+      let resolv: () => void;
+      const p = new Promise<void>((resolve) => {
+        resolv = resolve;
+      });
+      settlePromises.push(p as Promise<void>);
+
+      // 将任务加入队列
+      const task = () =>
+        uploadSingleFile({ uFile, index: -1 }).finally(() => {
+          // 无论成功或失败，都通知这一项已完成（用于 onUploaded 回调判断）
+          resolv && resolv();
+        });
+
+      queue.push(task);
     });
 
-    Promise.allSettled(promises).then(() => {
+    // 触发队列执行
+    runQueue();
+
+    Promise.allSettled(settlePromises).then(() => {
       if (options.onUploaded) {
         const responses = files.value
           .filter((f) => f.status === "done")
@@ -172,17 +219,39 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
   }
 
   function retryFailed() {
-    files.value.forEach((f, index) => {
+    const settlePromises: Promise<void>[] = [];
+    files.value.forEach((f) => {
       if (f.status === "error") {
         f.status = "pending";
         f.progress = 0;
-        uploadSingleFile({ uFile: f, index });
+        let resolv: () => void;
+        const p = new Promise<void>((resolve) => {
+          resolv = resolve;
+        });
+        settlePromises.push(p as Promise<void>);
+        const task = () =>
+          uploadSingleFile({ uFile: f, index: -1 }).finally(() => {
+            resolv && resolv();
+          });
+        queue.push(task);
+      }
+    });
+    runQueue();
+    // 可选：等待所有重试完成后触发回调
+    Promise.allSettled(settlePromises).then(() => {
+      if (options.onUploaded) {
+        const responses = files.value
+          .filter((f) => f.status === "done")
+          .map((f) => f.response);
+        options.onUploaded(responses);
       }
     });
   }
 
   function clearAll() {
+    // 清空文件列表，清空队列，保留正在上传的任务（不能取消xhr）
     files.value = [];
+    queue.splice(0, queue.length);
   }
 
   function clearSuccess() {
@@ -397,5 +466,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
     retryFailed,
     clearAll,
     clearSuccess,
+    concurrency,
+    setConcurrency,
   };
 }
