@@ -43,7 +43,6 @@ export async function fetchTelegramWithRetry(
           }`
         );
       }
-      console.log("返回的数据", response);
       return response;
     } catch (err: any) {
       lastError = err;
