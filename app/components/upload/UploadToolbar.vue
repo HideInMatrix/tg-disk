@@ -2,6 +2,7 @@
 import { ref, computed } from "vue";
 import type { UploadableFile } from "~/components/upload/useFileUpload";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "vue-sonner";
 
 type CopyType = "markdown" | "url";
 
@@ -50,7 +51,9 @@ function copySuccessData() {
       .join("\n");
   }
 
-  navigator.clipboard.writeText(data);
+  navigator.clipboard.writeText(data).then(() => {
+    toast.success("复制成功");
+  });
 }
 
 const innerUploadDisk = computed({

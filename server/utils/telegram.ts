@@ -43,7 +43,7 @@ export async function fetchTelegramWithRetry(
           }`
         );
       }
-
+      console.log("返回的数据", response);
       return response;
     } catch (err: any) {
       lastError = err;
@@ -73,7 +73,7 @@ export async function fetchTelegramWithRetry(
 export function getFileInfo(responseData: {
   ok: any;
   description: any;
-  result: { photo: any[]; video: any; audio: any; document: any };
+  result: { photo: any[]; video: any; audio: any; document: any; sticker: any };
 }) {
   const getFileDetails = (file: {
     file_id: any;
@@ -109,6 +109,10 @@ export function getFileInfo(responseData: {
 
     if (responseData.result.document) {
       return getFileDetails(responseData.result.document);
+    }
+
+    if (responseData.result.sticker) {
+      return getFileDetails(responseData.result.sticker);
     }
 
     return null;
