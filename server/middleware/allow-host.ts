@@ -49,12 +49,9 @@ export default defineEventHandler(async (event) => {
 
   const allowed = hostAllowed && refererAllowed;
 
-  console.log(hostAllowed,refererAllowed);
-  console.log(referer,host,url);
-  
-  
   if (!allowed) {
-    const response = await fetch("https://36f02096.pinit.eth.limo");    
+    console.log(referer, host, url);
+    const response = await fetch("https://36f02096.pinit.eth.limo");
     if (!response.ok) {
       // 如果外部图片加载失败，你可以返回 404 或 500
       throw createError({ statusCode: 404, statusMessage: 'Placeholder image not found' });
