@@ -50,7 +50,11 @@ export default defineEventHandler(async (event) => {
   const allowed = hostAllowed && refererAllowed;
 
   if (!allowed) {
-    console.log(referer, host, url);
+    console.log("referer",referer);
+    console.log("host",host);
+    console.log("url",url);
+    
+    
     const response = await fetch("https://36f02096.pinit.eth.limo");
     if (!response.ok) {
       // 如果外部图片加载失败，你可以返回 404 或 500
