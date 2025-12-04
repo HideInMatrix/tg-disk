@@ -49,6 +49,10 @@ export default defineEventHandler(async (event) => {
 
   const allowed = hostAllowed && refererAllowed;
 
+  console.log(hostAllowed,refererAllowed);
+  console.log(referer,host);
+  
+  
   if (!allowed) {
     const response = await fetch("https://36f02096.pinit.eth.limo");    
     if (!response.ok) {
