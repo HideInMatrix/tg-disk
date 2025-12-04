@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
   const allowed = hostAllowed && refererAllowed;
 
   console.log(hostAllowed,refererAllowed);
-  console.log(referer,host);
+  console.log(referer,host,url);
   
   
   if (!allowed) {
