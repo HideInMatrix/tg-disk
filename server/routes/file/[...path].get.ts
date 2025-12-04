@@ -1,17 +1,11 @@
 import { createError } from "h3";
 import { defaultHeaders } from "#imports";
 import axios from "axios";
-import http from "node:http";
-import https from "node:https";
-import { join } from "node:path";
-import { createReadStream } from "node:fs";
 import { withFileDownload, withRemoteFetch } from "~~/server/utils/concurrency";
 
 // 带 keep-alive 的 axios 实例，复用连接
 const remoteClient = axios.create({
   timeout: 20_000,
-  httpAgent: new http.Agent({ keepAlive: true, maxSockets: 100 }),
-  httpsAgent: new https.Agent({ keepAlive: true, maxSockets: 100 }),
 });
 
 function getMimeType(filename: string) {
@@ -73,10 +67,14 @@ export default defineEventHandler(async (event) => {
 
   try {
     if (!fileUrl) {
-      const filePath = join(process.cwd(), "public/404.webp");
+      const response = await fetch("https://4c552a81.pinit.eth.limo");
+      if (!response.ok) {
+        // 如果外部图片加载失败，你可以返回 404 或 500
+        throw createError({ statusCode: 404, statusMessage: 'Placeholder image not found' });
+      }
       setHeader(event, "Content-Type", "image/webp");
       setHeader(event, "Cache-Control", "public, max-age=0");
-      return sendStream(event, createReadStream(filePath));
+      return sendStream(event, response.body as ReadableStream);
     }
 
     const response = await withFileDownload(() =>
