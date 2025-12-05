@@ -1,9 +1,4 @@
-import {
-  defineEventHandler,
-  setHeader,
-  getHeader,
-  getRequestURL,
-} from "h3";
+import { defineEventHandler, setHeader, getHeader, getRequestURL } from "h3";
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();
@@ -50,15 +45,13 @@ export default defineEventHandler(async (event) => {
   const allowed = hostAllowed && refererAllowed;
 
   if (!allowed) {
-    console.log("referer",referer);
-    console.log("host",host);
-    console.log("url",url);
-    
-    
     const response = await fetch("https://36f02096.pinit.eth.limo");
     if (!response.ok) {
       // 如果外部图片加载失败，你可以返回 404 或 500
-      throw createError({ statusCode: 404, statusMessage: 'Placeholder image not found' });
+      throw createError({
+        statusCode: 404,
+        statusMessage: "Placeholder image not found",
+      });
     }
     // ❌ 不允许访问：返回占位图，或者你也可以直接 403
     setHeader(event, "Content-Type", "image/webp");
