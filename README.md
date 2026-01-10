@@ -24,3 +24,9 @@
 ### 服务端（可选）
 
 服务端也内置了一个并发控制工具 `server/utils/concurrency.ts`，可通过 `configureConcurrency("upload", { maxConcurrent: 2 })` 等方法根据业务场景调整限制。
+
+
+### 特色
+1. 无限存储网盘
+2. ipfs,telegram存储方式
+3. 防盗措施
