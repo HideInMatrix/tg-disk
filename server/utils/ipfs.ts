@@ -17,6 +17,43 @@ interface ChunkSessionResponse {
 }
 
 
+/**
+ * 将 IPFS relay 返回的数据转换为标准格式（与 Telegram 保持一致）
+ * @param responseData IPFS API 返回的数据
+ * @returns 标准化的文件信息对象
+ */
+export function formatIPFSFileInfo(responseData: {
+  status?: string
+  cid?: string
+  url?: string
+  web2url?: string
+  fileSize?: number
+  fileName?: string
+  [key: string]: any
+}) {
+  try {
+    // 返回标准格式：{ file_id, file_name, file_size }
+    return {
+      file_id: responseData.cid || responseData.url || 'unknown',
+      file_name: responseData.fileName || 'unknown',
+      file_size: responseData.fileSize || 0
+    }
+  } catch (error) {
+    console.error('[IPFS Format] 格式转换失败:', error)
+    return null
+  }
+}
+
+/**
+ * 将本地代理 URL 转换为对应的 IPFS 网关 URL
+ * 本地: /api/ipfs/crossbell/{cid}
+ * 网关: https://ipfs.io/ipfs/{cid} 或其他自定义网关
+ */
+export function getIPFSProxyUrl(cid: string, baseUrl: string = '/api/ipfs/crossbell'): string {
+  if (!cid) return ''
+  return `${baseUrl}/${cid}`
+}
+
 export const useIPFS = async (file: File) => {
     const helia = await createHelia()
     const fs = unixfs(helia)

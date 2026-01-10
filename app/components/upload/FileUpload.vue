@@ -3,7 +3,7 @@ import { ref, watch } from "vue";
 import { Upload } from "lucide-vue-next";
 import { cn } from "@/lib/utils";
 import { Motion } from "motion-v";
-import { useFileUpload } from "~/components/upload/useFileUpload";
+import { useFileUpload } from "~/composables/useFileUpload";
 import FileItem from "./FileItem.vue";
 import UploadToolbar from "./UploadToolbar.vue";
 import AreaText from "~/components/input/AreaText.vue";

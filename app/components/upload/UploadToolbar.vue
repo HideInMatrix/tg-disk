@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import type { UploadableFile } from "~/components/upload/useFileUpload";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "vue-sonner";
 
@@ -34,12 +33,14 @@ function updateConcurrency(v: number) {
 
 function copySuccessData() {
   let data = "";
+  console.log(props.files);
+  
   if (copyType.value === "markdown") {
     data = props.files
       .filter((f) => f.status === "done")
       .map(
         (f, index) =>
-          `![${index}](${location.href}file/${f.response.data.file_id})`
+          `![${index}](${location.href}${f.url})`
       )
       .join("\n");
   }
@@ -47,7 +48,7 @@ function copySuccessData() {
   if (copyType.value === "url") {
     data = props.files
       .filter((f) => f.status === "done")
-      .map((f) => f.response.data.file_id)
+      .map((f) => f.response.url)
       .join("\n");
   }
 
