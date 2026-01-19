@@ -56,3 +56,28 @@ Manage Channel -> administrators -> 开启除了Add New admins之外的所有权
 
 频道 ID 前面有 - 号时需要保留
 Bot 必须具有频道管理员权限
+
+## .env.example
+
+将 .env.example 里面的参数改成自己的参数，并且将.env.example 改成.env
+
+## cloudflare workers 部署
+
+### 第一步：Fork 项目
+
+访问 CloudFlare ImgBed 项目
+点击右上角的 "Fork" 按钮
+选择您的 GitHub 账户
+确认 Fork 完成
+
+### 访问 Cloudflare Dashboard
+
+登录 Cloudflare Dashboard
+选择左侧菜单的 "计算和AI" -> "Workers & Pages"
+点击 "创建应用程序"
+在最下方 Looking to deploy Pages? 选择 "Get started"
+在 "导入现有 Git 存储库" 处点击 "开始使用"
+
+### 配置参数
+
+点击项目进入设置->变量和机密->添加.env.example里的参数->重新部署
