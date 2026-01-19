@@ -1,6 +1,7 @@
 import { ref, computed, watch } from "vue";
 import { v4 as uuidv4 } from "uuid";
 import { useIPFS } from "~/composables/useIPFS";
+import { usePinMeIPFS } from "~/composables/usePinMeIPFS";
 import { uploadFileToTelegram, uploadUrlToTelegram } from "~/composables/useTelegram";
 
 export type UploadStatus = "pending" | "uploading" | "done" | "error";
@@ -50,7 +51,8 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
       uploadType.value === "file" &&
       uFile
     ) {
-      return uploadToIPFS(uFile);
+      // return uploadToIPFS(uFile);
+      return uploadToPinMeIPFS(uFile);
     } else {
       return Promise.reject(new Error("Unsupported upload type or disk"));
     }
@@ -272,6 +274,58 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
         files.value[index].progress = 100
         files.value[index].response = standardizedResponse
         files.value[index].url = `ipfs/crossbell/${standardizedResponse.data.cid}`
+
+        unwatch()
+        resolve(standardizedResponse as any)
+      } catch (err) {
+        if (files.value[index]) files.value[index].status = 'error'
+        reject(err)
+      }
+    })
+  }
+
+  function uploadToPinMeIPFS(uFile: UploadableFile): Promise<void> {
+    return new Promise(async (resolve, reject) => {
+      const index = files.value.findIndex((f) => f.id === uFile.id)
+      if (!files.value[index]) return reject(new Error('Error File Index'))
+      files.value[index].status = 'uploading'
+
+      try {
+        // usePinMeIPFS composable provides uploadFile and progress
+        const { uploadFile, progress } = usePinMeIPFS()
+        const unwatch = watch(progress, (p) => {
+          if (files.value[index]) files.value[index].progress = p
+        })
+
+        const result = await uploadFile(uFile.file)
+
+        if (!files.value[index]) {
+          unwatch()
+          return reject(new Error('Error File Index'))
+        }
+
+        if (result.status !== 'success') {
+          unwatch()
+          throw new Error(result.message || 'PinMe IPFS upload failed')
+        }
+
+        const standardizedResponse = {
+          code: 200,
+          msg: 'ok',
+          data: {
+            file_id: result.shortUrl || result.hash || 'unknown',
+            file_name: uFile.file.name,
+            file_size: uFile.file.size,
+            hash: result.hash,
+            shortUrl: result.shortUrl,
+            traceId: result.traceId,
+          },
+        }
+
+        files.value[index].status = 'done'
+        files.value[index].progress = 100
+        files.value[index].response = standardizedResponse
+        files.value[index].url = `ipfs/pinme/${standardizedResponse.data.shortUrl}`
 
         unwatch()
         resolve(standardizedResponse as any)
