@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
         await setUserSession(event, {
             // User data
             user: {
-                login: 'atinux'
+                login: 'admin'
             },
             // Private data accessible only on server/ routes
             secure: {
@@ -17,10 +17,10 @@ export default defineEventHandler(async (event) => {
         }, {
             maxAge: 60 * 60 * 24 * 7,
         })
-        return {code:200,data:true}
-    }else if(!config.public.account && !config.public.password){
-        return {code:200,data:true}
-    }else{
-        return {code:401,data:false}
+        return { code: 200, data: true }
+    } else if (!config.public.account && !config.public.password) {
+        return { code: 200, data: true }
+    } else {
+        return { code: 401, data: false }
     }
 })

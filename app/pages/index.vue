@@ -2,7 +2,6 @@
 import FileUpload from "~/components/upload/FileUpload.vue";
 import FileUploadGrid from "~/components/upload/FileUploadGrid.vue";
 
-definePageMeta({ middleware: "auth" });
 const config = useRuntimeConfig();
 const { clear, loggedIn } = useUserSession();
 

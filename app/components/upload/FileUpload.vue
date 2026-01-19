@@ -6,6 +6,7 @@ import { Motion } from "motion-v";
 import { useFileUpload } from "~/composables/useFileUpload";
 import FileItem from "./FileItem.vue";
 import UploadToolbar from "./UploadToolbar.vue";
+import LoginOverlay from "./LoginOverlay.vue";
 import AreaText from "~/components/input/AreaText.vue";
 
 interface FileUploadProps {
@@ -16,6 +17,8 @@ interface FileUploadProps {
   concurrency?: number; // 最大并发数
 }
 
+const { loggedIn } = useUserSession();
+
 const props = defineProps<FileUploadProps>();
 const emit = defineEmits<{
   (e: "onChange", files: File[]): void;
@@ -23,18 +26,7 @@ const emit = defineEmits<{
 }>();
 
 // 使用 Composable
-const {
-  files,
-  stats,
-  addFiles,
-  retryFailed,
-  clearAll,
-  clearSuccess,
-  uploadDisk,
-  uploadType,
-  concurrency,
-  setConcurrency,
-} = useFileUpload({
+const { files, stats, addFiles, retryFailed, clearAll, clearSuccess, uploadDisk, uploadType, concurrency, setConcurrency } = useFileUpload({
   uploadUrl: props.uploadUrl,
   extraFormData: props.extraFormData,
   concurrency: props.concurrency ?? 3,
@@ -46,7 +38,7 @@ watch(
   () => props.concurrency,
   (val) => {
     if (val && typeof setConcurrency === "function") setConcurrency(val);
-  }
+  },
 );
 
 // 拖拽和输入框交互逻辑
@@ -75,16 +67,9 @@ function handleDrop(e: DragEvent) {
 
 <template>
   <ClientOnly>
-    <div
-      :class="cn('w-full relative', props.class)"
-      @dragover.prevent="isActive = true"
-      @dragleave="isActive = false"
-      @drop.prevent="handleDrop">
+    <div :class="cn('w-full relative', props.class)" @dragover.prevent="isActive = true" @dragleave="isActive = false" @drop.prevent="handleDrop">
       <!-- 工具栏 (当有文件时显示) -->
-      <Motion
-        :initial="{ opacity: 0, y: 10 }"
-        :animate="{ opacity: 1, y: 0 }"
-        class="relative z-50">
+      <Motion :initial="{ opacity: 0, y: 10 }" :animate="{ opacity: 1, y: 0 }" class="relative z-50">
         <UploadToolbar
           v-model:upload-disk="uploadDisk"
           v-model:upload-type="uploadType"
@@ -97,9 +82,12 @@ function handleDrop(e: DragEvent) {
           @clear-success="clearSuccess" />
       </Motion>
 
-      <div
-        class="group/file relative block w-full cursor-pointer overflow-hidden rounded-lg border-2 border-dashed border-neutral-200 dark:border-neutral-800 p-10 transition-colors duration-300"
-        v-if="uploadType === 'url'">
+      <!-- URL 转存区域 -->
+      <div v-if="uploadType === 'url'" class="group/file relative block w-full cursor-pointer overflow-hidden rounded-lg border-2 border-dashed border-neutral-200 dark:border-neutral-800 p-10 transition-colors duration-300">
+        <!-- 未登录蒙层 -->
+        <template v-if="!loggedIn && uploadDisk === 'telegram'">
+          <LoginOverlay />
+        </template>
         <AreaText @upload-urls="handleUrlChange" />
         <!-- 文件列表 -->
         <div v-if="files.length !== 0" class="grid gap-3 mt-2">
@@ -107,42 +95,32 @@ function handleDrop(e: DragEvent) {
         </div>
       </div>
 
-      <!-- 拖拽/点击区域 -->
+      <!-- 文件上传区域 -->
       <div
+        v-else
         class="group/file relative block w-full cursor-pointer overflow-hidden rounded-lg border-2 border-dashed border-neutral-200 dark:border-neutral-800 p-10 transition-colors duration-300"
         :class="{
           'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20': isActive,
         }"
-        @click="fileInputRef?.click()"
-        v-else>
-        <input
-          ref="fileInputRef"
-          type="file"
-          class="hidden"
-          @change="onInputChange"
-          :multiple="multiple" />
+        @click="fileInputRef?.click()">
+        <!-- 未登录蒙层 -->
+        <template v-if="!loggedIn && uploadDisk === 'telegram'">
+          <LoginOverlay />
+        </template>
+        <input ref="fileInputRef" type="file" class="hidden" @change="onInputChange" :multiple="props.multiple" />
 
         <!-- 背景网格装饰 -->
-        <div
-          class="pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,white,transparent)]"></div>
+        <div class="pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,white,transparent)]"></div>
 
         <!-- 列表内容区 -->
         <div class="relative z-20 flex flex-col gap-4">
           <!-- 空状态提示 -->
-          <div
-            v-if="files.length === 0"
-            class="flex flex-col items-center justify-center py-10">
-            <div
-              class="mb-4 rounded-full bg-neutral-100 p-4 dark:bg-neutral-800">
+          <div v-if="files.length === 0" class="flex flex-col items-center justify-center py-10">
+            <div class="mb-4 rounded-full bg-neutral-100 p-4 dark:bg-neutral-800">
               <Upload class="h-6 w-6 text-neutral-500" />
             </div>
-            <p
-              class="text-base font-bold text-neutral-700 dark:text-neutral-300">
-              上传文件
-            </p>
-            <p class="mt-1 text-sm text-neutral-400">
-              拖放文件到此处或点击上传
-            </p>
+            <p class="text-base font-bold text-neutral-700 dark:text-neutral-300">上传文件</p>
+            <p class="mt-1 text-sm text-neutral-400">拖放文件到此处或点击上传</p>
           </div>
 
           <!-- 文件列表 -->
@@ -152,9 +130,7 @@ function handleDrop(e: DragEvent) {
 
           <!-- 继续添加文件的提示 (仅当有文件时显示在底部) -->
           <div v-if="files.length > 0" class="mt-4 text-center">
-            <p class="text-xs text-neutral-400 hover:text-blue-500 transition">
-              点击或拖拽更多文件以追加
-            </p>
+            <p class="text-xs text-neutral-400 hover:text-blue-500 transition">点击或拖拽更多文件以追加</p>
           </div>
         </div>
       </div>
