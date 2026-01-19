@@ -25,8 +25,34 @@
 
 服务端也内置了一个并发控制工具 `server/utils/concurrency.ts`，可通过 `configureConcurrency("upload", { maxConcurrent: 2 })` 等方法根据业务场景调整限制。
 
-
 ### 特色
+
 1. 无限存储网盘
 2. ipfs,telegram存储方式
 3. 防盗措施
+
+## telegram bot
+
+### 获取 TG_BOT_TOKEN
+
+在 Telegram 中搜索 @BotFather
+发送 /newbot 命令
+按提示输入 Bot 名称和用户名
+获得 Bot Token（格式：123456789:ABCdefGHIjklMNOpqrsTUVwxyz）
+创建 Telegram Bot
+
+### 获取 TG_CHAT_ID
+
+创建一个新的 Telegram 频道（Channel）
+将创建的 Bot 添加为频道管理员
+给予 Bot 消息管理的权限
+Manage Channel -> administrators -> 开启除了Add New admins之外的所有权限
+在频道中发送一条测试消息
+向 @VersaToolsBot 转发这条消息
+获得频道 ID（示例：-1001234567890）
+获取频道 ID
+
+注意
+
+频道 ID 前面有 - 号时需要保留
+Bot 必须具有频道管理员权限
