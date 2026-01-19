@@ -20,7 +20,7 @@ const handleLogout = async () => {
   <NuxtLayout>
     <div class="max-w-6xl mx-auto p-6">
       <div class="flex justify-between">
-        <h1 class="text-2xl font-medium mb-4">你的网盘</h1>
+        <h1 class="text-2xl font-medium mb-4">MM盘</h1>
         <div class="flex" v-if="loggedIn">
           <Button @click="handleLogout">退出</Button>
         </div>

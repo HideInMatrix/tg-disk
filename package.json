@@ -2,6 +2,7 @@
   "name": "tg-disk",
   "type": "module",
   "private": true,
+  "version": "0.1.0",
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev --host 0.0.0.0",
