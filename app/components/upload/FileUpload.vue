@@ -84,10 +84,6 @@ function handleDrop(e: DragEvent) {
 
       <!-- URL 转存区域 -->
       <div v-if="uploadType === 'url'" class="group/file relative block w-full cursor-pointer overflow-hidden rounded-lg border-2 border-dashed border-neutral-200 dark:border-neutral-800 p-10 transition-colors duration-300">
-        <!-- 未登录蒙层 -->
-        <template v-if="!loggedIn && uploadDisk === 'telegram'">
-          <LoginOverlay />
-        </template>
         <AreaText @upload-urls="handleUrlChange" />
         <!-- 文件列表 -->
         <div v-if="files.length !== 0" class="grid gap-3 mt-2">
@@ -98,15 +94,13 @@ function handleDrop(e: DragEvent) {
       <!-- 文件上传区域 -->
       <div
         v-else
-        class="group/file relative block w-full cursor-pointer overflow-hidden rounded-lg border-2 border-dashed border-neutral-200 dark:border-neutral-800 p-10 transition-colors duration-300"
+        class="group/file relative block w-full overflow-hidden rounded-lg border-2 border-dashed border-neutral-200 dark:border-neutral-800 p-10 transition-colors duration-300"
         :class="{
           'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20': isActive,
         }"
         @click="fileInputRef?.click()">
         <!-- 未登录蒙层 -->
-        <template v-if="!loggedIn && uploadDisk === 'telegram'">
-          <LoginOverlay />
-        </template>
+
         <input ref="fileInputRef" type="file" class="hidden" @change="onInputChange" :multiple="props.multiple" />
 
         <!-- 背景网格装饰 -->
@@ -134,6 +128,8 @@ function handleDrop(e: DragEvent) {
           </div>
         </div>
       </div>
+
+      <LoginOverlay v-if="!loggedIn && uploadDisk === 'telegram'" />
     </div>
   </ClientOnly>
 </template>
