@@ -75,8 +75,8 @@ const innerUploadType = computed({
       </Tabs>
       <Tabs v-model="innerUploadType">
         <TabsList>
-          <TabsTrigger value="file"> 文件上传 </TabsTrigger>
-          <TabsTrigger value="url" v-show="innerUploadDisk !== 'ipfs'"> 文件地址转存 </TabsTrigger>
+          <TabsTrigger value="file" :disabled="!loggedIn && innerUploadDisk === 'telegram'"> 文件上传 </TabsTrigger>
+          <TabsTrigger value="url" v-show="innerUploadDisk !== 'ipfs'" :disabled="!loggedIn"> 文件地址转存 </TabsTrigger>
         </TabsList>
       </Tabs>
     </div>

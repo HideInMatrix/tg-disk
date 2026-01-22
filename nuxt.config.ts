@@ -2,6 +2,17 @@
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
+  app: {
+    head: {
+      script: [
+        {
+          src: 'https://docs.opencv.org/4.5.0/opencv.js',
+          async: true,
+          type: 'text/javascript'
+        }
+      ]
+    }
+  },
   modules: [
     "@nuxt/image",
     "@nuxt/fonts",
