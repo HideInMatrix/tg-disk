@@ -90,12 +90,12 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
 
   // 添加文件
   function addFiles(newRawFiles: File[] | string[]) {
-    const newUploadables: UploadableFile[] = [];
+    const newUploadableFiles: UploadableFile[] = [];
 
     if (uploadType.value === "file") {
       newRawFiles.forEach((file) => {
         if (typeof file === "string") return; // Skip if not a File
-        newUploadables.push({
+        newUploadableFiles.push({
           id: uuidv4(),
           file,
           status: "pending",
@@ -107,7 +107,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
     } else if (uploadType.value === "url") {
       newRawFiles.forEach((file) => {
         if (typeof file !== "string") return; // Skip if not a string URL
-        newUploadables.push({
+        newUploadableFiles.push({
           id: uuidv4(),
           file: new File([], file.split("/").pop()?.split(".").shift() || ""), // 创建一个空的 File 对象作为占位符
           status: "pending",
@@ -117,15 +117,15 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
         });
       });
     }
-    files.value = [...files.value, ...newUploadables];
+    files.value = [...files.value, ...newUploadableFiles];
 
     // 为每个待上传文件建立一个 Promise，用来通知该批次上传完成
     const settlePromises: Promise<void>[] = [];
-    newUploadables.forEach((uFile) => {
+    newUploadableFiles.forEach((uFile) => {
       if (uFile.status === "done") return;
-      let resolv: () => void;
+      let willResolve: () => void;
       const p = new Promise<void>((resolve) => {
-        resolv = resolve;
+        willResolve = resolve;
       });
       settlePromises.push(p as Promise<void>);
 
@@ -133,7 +133,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
       const task = () =>
         uploadSingleFile({ uFile, index: -1 }).finally(() => {
           // 无论成功或失败，都通知这一项已完成（用于 onUploaded 回调判断）
-          resolv && resolv();
+          willResolve && willResolve();
         });
 
       queue.push(task);
@@ -158,14 +158,14 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
       if (f.status === "error") {
         f.status = "pending";
         f.progress = 0;
-        let resolv: () => void;
+        let willResolve: () => void;
         const p = new Promise<void>((resolve) => {
-          resolv = resolve;
+          willResolve = resolve;
         });
         settlePromises.push(p as Promise<void>);
         const task = () =>
           uploadSingleFile({ uFile: f, index: -1 }).finally(() => {
-            resolv && resolv();
+            willResolve && willResolve();
           });
         queue.push(task);
       }
