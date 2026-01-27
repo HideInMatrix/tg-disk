@@ -16,6 +16,7 @@ export default defineEventHandler(async (event) => {
       ?.split(",")
       .map((h) => h.trim())
       .filter(Boolean) ?? [];
+  const refererFlag = config.public.refererFlag as boolean || false
 
   // 1. 没配置白名单就不做任何防盗链（方便本地调试）
   if (!allowHosts.length && !allowReferers.length) return;
@@ -38,7 +39,7 @@ export default defineEventHandler(async (event) => {
       refererAllowed = allowReferers.includes(refererHost);
     } catch {
       // 没有 referer 或格式错误，当成不合法（你也可以改成放行）
-      refererAllowed = false;
+      refererAllowed = refererFlag;
     }
   }
 

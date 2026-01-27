@@ -34,6 +34,7 @@ export default defineNuxtConfig({
       account: process.env.NUXT_PUBLIC_ACCOUNT,
       password: process.env.NUXT_PUBLIC_PASSWORD,
       allowReferers: process.env.NUXT_PUBLIC_ALLOW_REFERERS,
+      refererFlag: process.env.NUXT_PUBLIC_REFERER_FLAG === "true" ? true : false,
     },
   },
   shadcn: {
