@@ -33,7 +33,7 @@ function copySuccessData() {
   if (copyType.value === "markdown") {
     data = props.files
       .filter((f) => f.status === "done")
-      .map((f, index) => `![${index}](${location.href}${f.url})`)
+      .map((f, index) => `![](${location.href}${f.url})`)
       .join("\n");
   }
 

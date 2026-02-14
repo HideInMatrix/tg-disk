@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Motion } from "motion-v"
 import { Progress } from '~/components/ui/progress'
-import type { UploadableFile } from '~/composables/useFileUpload'
 import { cn } from "@/lib/utils"
 
 defineProps<{
