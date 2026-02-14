@@ -44,6 +44,7 @@ watch(
 // 拖拽和输入框交互逻辑
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const isActive = ref(false);
+const urlAreaRef = useTemplateRef("urlArea");
 
 function handleFileChange(rawFiles: File[]) {
   emit("onChange", rawFiles);
@@ -78,13 +79,13 @@ function handleDrop(e: DragEvent) {
           :concurrency="concurrency"
           @update:concurrency="setConcurrency"
           @retry="retryFailed"
-          @clear-all="clearAll"
+          @clear-all="() => {clearAll(); urlAreaRef?.clear();}"
           @clear-success="clearSuccess" />
       </Motion>
 
       <!-- URL 转存区域 -->
       <div v-if="uploadType === 'url'" class="group/file relative block w-full cursor-pointer overflow-hidden rounded-lg border-2 border-dashed border-neutral-200 dark:border-neutral-800 p-10 transition-colors duration-300">
-        <AreaText @upload-urls="handleUrlChange" />
+        <AreaText ref="urlArea" @upload-urls="handleUrlChange" />
         <!-- 文件列表 -->
         <div v-if="files.length !== 0" class="grid gap-3 mt-2">
           <FileItem v-for="file in files" :key="file.id" :item="file" />

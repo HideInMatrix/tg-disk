@@ -11,6 +11,14 @@ const uploadUrl = () => {
     // 上传逻辑待实现
     emits('uploadUrls', urls.value.split('\n').map(url => url.trim()).filter(url => url !== ''))
 }
+
+const handleClear = () => {
+    urls.value = ''
+}
+
+defineExpose({
+    clear: handleClear
+})
 </script>
 
 <template>
