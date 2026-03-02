@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import { toRef } from "vue"
 import { Motion } from "motion-v"
 import { Progress } from '~/components/ui/progress'
 import { cn } from "@/lib/utils"
 
-defineProps<{
+const props = defineProps<{
   item: UploadableFile
 }>()
+const item = toRef(props, "item")
 
 const statusColors = {
   pending: 'text-neutral-500',
@@ -13,6 +15,7 @@ const statusColors = {
   done: 'text-green-600',
   error: 'text-red-600'
 }
+const { isImage, previewIcon, extensionLabel } = useFilePreviewIcon(item)
 </script>
 
 <template>
@@ -23,7 +26,14 @@ const statusColors = {
   >
     <!-- 预览图 -->
     <div class="h-20 w-20 shrink-0 overflow-hidden rounded-md border border-neutral-200 mr-4">
-      <img :src="item.url" class="h-full w-full object-cover" alt="preview" />
+      <img v-if="isImage" :src="item.url" class="h-full w-full object-cover" alt="preview" />
+      <div
+        v-else
+        class="flex h-full w-full flex-col items-center justify-center gap-1 bg-neutral-50 text-neutral-500 dark:bg-neutral-900/60 dark:text-neutral-300"
+      >
+        <component :is="previewIcon" class="h-8 w-8" />
+        <span class="text-[10px] font-medium leading-none">{{ extensionLabel }}</span>
+      </div>
     </div>
 
     <!-- 信息区 -->
