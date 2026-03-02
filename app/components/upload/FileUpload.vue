@@ -1,8 +1,9 @@
 <script lang="ts" setup>
-import { ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { Upload } from "lucide-vue-next";
 import { cn } from "@/lib/utils";
 import { Motion } from "motion-v";
+import { toast } from "vue-sonner";
 import { useFileUpload } from "~/composables/useFileUpload";
 import FileItem from "./FileItem.vue";
 import UploadToolbar from "./UploadToolbar.vue";
@@ -26,7 +27,7 @@ const emit = defineEmits<{
 }>();
 
 // 使用 Composable
-const { files, stats, addFiles, retryFailed, clearAll, clearSuccess, uploadDisk, uploadType, concurrency, setConcurrency } = useFileUpload({
+const { files, stats, addFiles, retryFailed, clearAll, clearSuccess, uploadDisk, uploadType, uploadLimits, currentUploadLimit, concurrency, setConcurrency } = useFileUpload({
   uploadUrl: props.uploadUrl,
   extraFormData: props.extraFormData,
   concurrency: props.concurrency ?? 3,
@@ -45,10 +46,28 @@ watch(
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const isActive = ref(false);
 const urlAreaRef = useTemplateRef("urlArea");
+const currentDiskLabel = computed(() => (uploadDisk.value === "telegram" ? "Telegram" : "PinMe IPFS"));
+const uploadLimitHint = computed(() => {
+  return `${currentDiskLabel.value} 单文件上限 ${currentUploadLimit.value.maxMiBLabel} (${currentUploadLimit.value.maxBytesLabel})`;
+});
+const allUploadLimitHint = computed(() => {
+  return `Telegram <= ${uploadLimits.value.telegram.maxMiBLabel}，PinMe IPFS <= ${uploadLimits.value.ipfs.maxMiBLabel}`;
+});
 
 function handleFileChange(rawFiles: File[]) {
-  emit("onChange", rawFiles);
-  addFiles(rawFiles);
+  const { acceptedFiles, rejectedFiles } = addFiles(rawFiles);
+  if (acceptedFiles.length > 0) {
+    emit("onChange", acceptedFiles);
+  }
+
+  if (rejectedFiles.length > 0) {
+    const firstRejected = rejectedFiles[0];
+    if (!firstRejected) return;
+    const suffix = rejectedFiles.length > 1 ? `，另有 ${rejectedFiles.length - 1} 个文件超限` : "";
+    toast.error(
+      `文件 ${firstRejected.file.name} 大小 ${firstRejected.actualSizeText}，超过 ${currentDiskLabel.value} 限制 ${firstRejected.limitSizeText}${suffix}`
+    );
+  }
 }
 
 function handleUrlChange(urls: string[]) {
@@ -86,6 +105,9 @@ function handleDrop(e: DragEvent) {
       <!-- URL 转存区域 -->
       <div v-if="uploadType === 'url'" class="group/file relative block w-full cursor-pointer overflow-hidden rounded-lg border-2 border-dashed border-neutral-200 dark:border-neutral-800 p-10 transition-colors duration-300">
         <AreaText ref="urlArea" @upload-urls="handleUrlChange" />
+        <div class="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
+          URL 转存无法在浏览器预先读取远程文件大小，若超过目标平台限制会在服务端返回失败。
+        </div>
         <!-- 文件列表 -->
         <div v-if="files.length !== 0" class="grid gap-3 mt-2">
           <FileItem v-for="file in files" :key="file.id" :item="file" />
@@ -109,6 +131,11 @@ function handleDrop(e: DragEvent) {
 
         <!-- 列表内容区 -->
         <div class="relative z-20 flex flex-col gap-4">
+          <div class="rounded-md border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-300">
+            <p>{{ uploadLimitHint }}</p>
+            <p class="mt-1 text-neutral-500 dark:text-neutral-400">{{ allUploadLimitHint }}</p>
+          </div>
+
           <!-- 空状态提示 -->
           <div v-if="files.length === 0" class="flex flex-col items-center justify-center py-10">
             <div class="mb-4 rounded-full bg-neutral-100 p-4 dark:bg-neutral-800">

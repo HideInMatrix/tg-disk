@@ -3,8 +3,23 @@ import { v4 as uuidv4 } from "uuid";
 import { useIPFS } from "~/composables/useIPFS";
 import { usePinMeIPFS } from "~/composables/usePinMeIPFS";
 import { uploadFileToTelegram, uploadUrlToTelegram } from "~/composables/useTelegram";
+import { useUploadLimit } from "~/composables/useUploadLimit";
 
 export type UploadStatus = "pending" | "uploading" | "done" | "error";
+
+type RejectedFileItem = {
+  file: File;
+  actualBytes: number;
+  actualSizeText: string;
+  limitBytes: number;
+  limitMiB: number;
+  limitSizeText: string;
+};
+
+type AddFilesResult = {
+  acceptedFiles: File[];
+  rejectedFiles: RejectedFileItem[];
+};
 
 
 
@@ -13,6 +28,11 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
 
   const uploadType = ref<UploadType>("file");
   const uploadDisk = ref<UploadDisk>("telegram");
+  const {
+    limits: uploadLimits,
+    currentLimit: currentUploadLimit,
+    formatMiB,
+  } = useUploadLimit(uploadDisk);
 
   // 统计计算属性
   const stats = computed(() => {
@@ -89,12 +109,27 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
   }
 
   // 添加文件
-  function addFiles(newRawFiles: File[] | string[]) {
+  function addFiles(newRawFiles: File[] | string[]): AddFilesResult {
     const newUploadableFiles: UploadableFile[] = [];
+    const acceptedFiles: File[] = [];
+    const rejectedFiles: RejectedFileItem[] = [];
 
     if (uploadType.value === "file") {
+      const limit = currentUploadLimit.value;
       newRawFiles.forEach((file) => {
         if (typeof file === "string") return; // Skip if not a File
+        if (file.size > limit.maxBytes) {
+          rejectedFiles.push({
+            file,
+            actualBytes: file.size,
+            actualSizeText: formatMiB(file.size),
+            limitBytes: limit.maxBytes,
+            limitMiB: limit.maxMiB,
+            limitSizeText: limit.maxMiBLabel,
+          });
+          return;
+        }
+        acceptedFiles.push(file);
         newUploadableFiles.push({
           id: uuidv4(),
           file,
@@ -117,6 +152,14 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
         });
       });
     }
+
+    if (newUploadableFiles.length === 0) {
+      return {
+        acceptedFiles,
+        rejectedFiles,
+      };
+    }
+
     files.value = [...files.value, ...newUploadableFiles];
 
     // 为每个待上传文件建立一个 Promise，用来通知该批次上传完成
@@ -150,6 +193,11 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
         options.onUploaded(responses);
       }
     });
+
+    return {
+      acceptedFiles,
+      rejectedFiles,
+    };
   }
 
   function retryFailed() {
@@ -341,6 +389,8 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
   return {
     uploadType,
     uploadDisk,
+    uploadLimits,
+    currentUploadLimit,
     files,
     stats,
     addFiles,

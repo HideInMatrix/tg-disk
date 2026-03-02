@@ -10,6 +10,7 @@ export default defineEventHandler(async (event) => {
   try {
     const body = await readFormData(event);
     const config = useRuntimeConfig();
+    const TELEGRAM_MAX_BYTES = 10 * 1024 * 1024; // 10 MiB
 
     const chat_id = (body.get("chatId")?.toString() ?? "").trim();
 
@@ -19,6 +20,11 @@ export default defineEventHandler(async (event) => {
 
     if (!file || !fileName) {
       throw new Error("文件和文件名不能为空");
+    }
+
+    if (file.size > TELEGRAM_MAX_BYTES) {
+      const sizeMiB = (file.size / (1024 * 1024)).toFixed(2);
+      throw new Error(`Telegram 单文件上限 10 MiB（${TELEGRAM_MAX_BYTES} Bytes），当前文件 ${sizeMiB} MiB`);
     }
 
     const fileInfo = getTelegramFileType(fileName);
