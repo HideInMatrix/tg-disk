@@ -50,9 +50,7 @@ const currentDiskLabel = computed(() => (uploadDisk.value === "telegram" ? "Tele
 const uploadLimitHint = computed(() => {
   return `${currentDiskLabel.value} 单文件上限 ${currentUploadLimit.value.maxMiBLabel} (${currentUploadLimit.value.maxBytesLabel})`;
 });
-const allUploadLimitHint = computed(() => {
-  return `Telegram <= ${uploadLimits.value.telegram.maxMiBLabel}，PinMe IPFS <= ${uploadLimits.value.ipfs.maxMiBLabel}`;
-});
+
 
 function handleFileChange(rawFiles: File[]) {
   const { acceptedFiles, rejectedFiles } = addFiles(rawFiles);
@@ -133,7 +131,6 @@ function handleDrop(e: DragEvent) {
         <div class="relative z-20 flex flex-col gap-4">
           <div class="rounded-md border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900/40 dark:text-neutral-300">
             <p>{{ uploadLimitHint }}</p>
-            <p class="mt-1 text-neutral-500 dark:text-neutral-400">{{ allUploadLimitHint }}</p>
           </div>
 
           <!-- 空状态提示 -->
