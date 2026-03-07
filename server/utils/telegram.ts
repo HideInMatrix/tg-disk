@@ -1,4 +1,4 @@
-import { TelegramFileType } from "~~/shared/telegram";
+import type { TelegramFileType } from "~~/shared/telegram";
 
 interface TelegramOptions {
   token: string;

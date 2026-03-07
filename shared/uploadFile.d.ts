@@ -1,3 +1,13 @@
+type UploadableFilePreviewType =
+  | "image"
+  | "video"
+  | "audio"
+  | "text"
+  | "spreadsheet"
+  | "archive"
+  | "code"
+  | "file";
+
 // 包装原生 File 对象，自带状态和进度，方便列表渲染
  interface UploadableFile {
   id: string;
@@ -6,6 +16,8 @@
   progress: number;
   response: any;
   url: string; // 预览图 URL
+  fileExtension: string;
+  fileType: UploadableFilePreviewType;
 }
 
 interface UseFileUploadOptions {

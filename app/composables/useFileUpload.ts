@@ -4,6 +4,7 @@ import { useIPFS } from "~/composables/useIPFS";
 import { usePinMeIPFS } from "~/composables/usePinMeIPFS";
 import { uploadFileToTelegram, uploadUrlToTelegram } from "~/composables/useTelegram";
 import { useUploadLimit } from "~/composables/useUploadLimit";
+import { getFileName, resolveFilePreviewMeta } from "@/lib/filePreview";
 
 export type UploadStatus = "pending" | "uploading" | "done" | "error";
 
@@ -129,6 +130,12 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
           });
           return;
         }
+        const previewUrl = URL.createObjectURL(file);
+        const previewMeta = resolveFilePreviewMeta({
+          fileName: file.name,
+          url: previewUrl,
+        });
+
         acceptedFiles.push(file);
         newUploadableFiles.push({
           id: uuidv4(),
@@ -136,19 +143,29 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
           status: "pending",
           progress: 0,
           response: null,
-          url: URL.createObjectURL(file), // 生成预览 URL
+          url: previewUrl, // 生成预览 URL
+          fileExtension: previewMeta.fileExtension,
+          fileType: previewMeta.fileType,
         });
       });
     } else if (uploadType.value === "url") {
       newRawFiles.forEach((file) => {
         if (typeof file !== "string") return; // Skip if not a string URL
+        const fileName = getFileName(file) || "file";
+        const previewMeta = resolveFilePreviewMeta({
+          fileName,
+          url: file,
+        });
+
         newUploadableFiles.push({
           id: uuidv4(),
-          file: new File([], file.split("/").pop()?.split(".").shift() || ""), // 创建一个空的 File 对象作为占位符
+          file: new File([], fileName), // 创建一个空的 File 对象作为占位符
           status: "pending",
           progress: 0,
           response: null,
           url: file, // 直接使用 URL 作为预览
+          fileExtension: previewMeta.fileExtension,
+          fileType: previewMeta.fileType,
         });
       });
     }

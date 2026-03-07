@@ -1,5 +1,5 @@
 import { createError } from "h3";
-import { defaultHeaders } from "#imports";
+import { defaultHeaders } from "~~/server/utils/defaultInfo";
 import { withFileDownload, withRemoteFetch } from "~~/server/utils/concurrency";
 import { getMimeType } from "~~/server/utils/fileType";
 
