@@ -6,6 +6,6 @@ import { Toaster } from "@/components/ui/sonner";
 <template>
   <div class="">
     <slot />
-    <Toaster position="top-center" />
+    <Toaster position="top-center" :duration="1000" />
   </div>
 </template>
