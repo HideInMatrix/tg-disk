@@ -8,6 +8,21 @@ interface TelegramOptions {
   timeout?: number;
 }
 
+function sanitizeTelegramError(error: any, token: string) {
+  const rawMessage = String(error?.message ?? error ?? "Telegram request failed");
+  const message = rawMessage.replaceAll(token, "<redacted>");
+  const safeError = new Error(message);
+
+  if (error?.statusCode) {
+    (safeError as any).statusCode = error.statusCode;
+  }
+  if (error?.status) {
+    (safeError as any).status = error.status;
+  }
+
+  return safeError;
+}
+
 /**
  * 带自动重试的 Telegram Bot API 请求
  * @param options
@@ -45,16 +60,16 @@ export async function fetchTelegramWithRetry(
       }
       return response;
     } catch (err: any) {
-      lastError = err;
+      lastError = sanitizeTelegramError(err, options.token);
 
       // 已经是最后一次尝试，直接抛出
       if (attempt === retries) break;
 
-      // 随机延迟 10~15 秒
+      // 随机延迟，避免在 Telegram 短暂不可用时连续打满请求
       const delay = minDelayMs + Math.random() * (maxDelayMs - minDelayMs);
       console.warn(
         `[Telegram] 第 ${attempt} 次请求失败，${delay / 1000}s 后重试...`,
-        err.message || err
+        lastError.message
       );
       await new Promise((resolve) => setTimeout(resolve, delay));
     }

@@ -18,7 +18,9 @@ interface FileUploadProps {
   concurrency?: number; // 最大并发数
 }
 
-const { loggedIn } = useUserSession();
+const { ready, loggedIn } = useUserSession();
+const config = useRuntimeConfig();
+const authRequired = computed(() => Boolean(config.public.account && config.public.password));
 
 const props = defineProps<FileUploadProps>();
 const emit = defineEmits<{
@@ -154,7 +156,7 @@ function handleDrop(e: DragEvent) {
         </div>
       </div>
 
-      <LoginOverlay v-if="!loggedIn && uploadDisk === 'telegram'" />
+      <LoginOverlay v-if="authRequired && ready && !loggedIn && uploadDisk === 'telegram'" />
     </div>
   </ClientOnly>
 </template>

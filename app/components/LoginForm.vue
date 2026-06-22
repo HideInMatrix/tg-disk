@@ -11,17 +11,25 @@ const formData = ref({
 });
 
 const showPassword = ref(false);
+const isSubmitting = ref(false);
+const { fetch: fetchUserSession } = useUserSession();
 
 const handleLogin = async () => {
-  const resp = await $fetch("/api/auth", { method: "POST", body: { ...formData.value } });
-  if (resp.code === 200) {
-    await navigateTo("/", {
-      external: true,
-    });
-  } else {
-    toast("登录失败，请检查账号密码", {
-      description: "账号或密码错误，请重试",
-    });
+  if (isSubmitting.value) return;
+
+  isSubmitting.value = true;
+  try {
+    const resp = await $fetch("/api/auth", { method: "POST", body: { ...formData.value } });
+    if (resp.code === 200) {
+      await fetchUserSession();
+      await navigateTo("/");
+    } else {
+      toast("登录失败，请检查账号密码", {
+        description: "账号或密码错误，请重试",
+      });
+    }
+  } finally {
+    isSubmitting.value = false;
   }
 };
 </script>
@@ -55,7 +63,9 @@ const handleLogin = async () => {
               </button>
             </div>
           </div>
-          <Button type="submit" class="w-full cursor-pointer">登录</Button>
+          <Button type="submit" class="w-full cursor-pointer" :disabled="isSubmitting">
+            {{ isSubmitting ? "登录中..." : "登录" }}
+          </Button>
         </form>
       </div>
     </div>

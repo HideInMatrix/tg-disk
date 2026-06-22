@@ -6,6 +6,7 @@ import { getMimeType } from "~~/server/utils/fileType";
 
 export default defineEventHandler(async (event) => {
   const envConfig = useRuntimeConfig();
+  const tgToken = envConfig.tgToken;
   const params = getRouterParams(event);
   const rawPath = params.path;
   const fileId = Array.isArray(rawPath) ? rawPath.join("/") : rawPath;
@@ -18,6 +19,10 @@ export default defineEventHandler(async (event) => {
   if (isFilePath) {
     fileUrl = `https://telegra.ph/file/${fileId}`;
   } else {
+    if (!tgToken) {
+      throw createError({ statusCode: 500, message: "Telegram Bot Token 未配置" });
+    }
+
     // 这里就不要把错误静默处理了，直接抛出去
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 20000);
@@ -25,7 +30,7 @@ export default defineEventHandler(async (event) => {
     try {
       infoResp = await withRemoteFetch(() =>
         fetch(
-          `https://api.telegram.org/bot${envConfig.public.tgToken}/getFile?file_id=${fileId}`,
+          `https://api.telegram.org/bot${tgToken}/getFile?file_id=${fileId}`,
           {
             method: "GET",
             headers: defaultHeaders,
@@ -47,7 +52,7 @@ export default defineEventHandler(async (event) => {
     if (!filePath) {
       throw createError({ statusCode: 404, message: "file_path 未找到" });
     }
-    fileUrl = `https://api.telegram.org/file/bot${envConfig.public.tgToken}/${filePath}`;
+    fileUrl = `https://api.telegram.org/file/bot${tgToken}/${filePath}`;
     fileName = filePath.split("/").pop() || "file";
   }
   try {

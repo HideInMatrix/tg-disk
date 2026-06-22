@@ -87,7 +87,8 @@ Bot 必须具有频道管理员权限
 
 **说明：**
 
-- 账号密码从环境变量 `PUBLIC_ACCOUNT` 和 `PUBLIC_PASSWORD` 获取
+- 账号密码从环境变量 `NUXT_PUBLIC_ACCOUNT` 和 `NUXT_PUBLIC_PASSWORD` 获取
+- Telegram Bot Token 从服务端私有环境变量 `NUXT_TG_TOKEN` 获取
 - 如果未配置环境变量，则任何请求都会登录成功
 - 登录成功后会设置用户 Session，有效期为 7 天
 

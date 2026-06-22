@@ -7,6 +7,7 @@ import { LockKeyhole, LockKeyholeOpen } from "lucide-vue-next";
 type CopyType = "markdown" | "url";
 
 const { loggedIn } = useUserSession();
+const config = useRuntimeConfig();
 
 const props = defineProps<{
   uploadDisk: string;
@@ -21,6 +22,7 @@ const emit = defineEmits(["retry", "clearAll", "clearSuccess", "update:uploadDis
 const dropdownOpen = ref(false);
 const copyType = ref<CopyType>("markdown");
 const concurrencyLocal = ref(props.concurrency ?? 3);
+const authRequired = computed(() => Boolean(config.public.account && config.public.password));
 
 function updateConcurrency(v: number) {
   concurrencyLocal.value = v;
@@ -60,6 +62,8 @@ const innerUploadType = computed({
   get: () => props.uploadType,
   set: (val) => emit("update:uploadType", val),
 });
+
+const telegramLocked = computed(() => authRequired.value && !loggedIn.value && innerUploadDisk.value === "telegram");
 </script>
 
 <template>
@@ -68,15 +72,15 @@ const innerUploadType = computed({
       <Tabs v-model="innerUploadDisk">
         <TabsList>
           <TabsTrigger value="telegram">
-            <div class="flex items-center gap-1">中心化 <LockKeyholeOpen :size="16" v-if="loggedIn" /> <LockKeyhole :size="16" v-else /></div>
+            <div class="flex items-center gap-1">中心化 <LockKeyholeOpen :size="16" v-if="!authRequired || loggedIn" /> <LockKeyhole :size="16" v-else /></div>
           </TabsTrigger>
           <TabsTrigger value="ipfs" disable> 去中心化 </TabsTrigger>
         </TabsList>
       </Tabs>
       <Tabs v-model="innerUploadType">
         <TabsList>
-          <TabsTrigger value="file" :disabled="!loggedIn && innerUploadDisk === 'telegram'"> 文件上传 </TabsTrigger>
-          <TabsTrigger value="url" v-show="innerUploadDisk !== 'ipfs'" :disabled="!loggedIn"> 文件地址转存 </TabsTrigger>
+          <TabsTrigger value="file" :disabled="telegramLocked"> 文件上传 </TabsTrigger>
+          <TabsTrigger value="url" v-show="innerUploadDisk !== 'ipfs'" :disabled="authRequired && !loggedIn"> 文件地址转存 </TabsTrigger>
         </TabsList>
       </Tabs>
     </div>

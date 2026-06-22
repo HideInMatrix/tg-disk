@@ -6,11 +6,12 @@ export default defineEventHandler(async (event) => {
     // 1. 读取表单数据
     const body = await readFormData(event);
     const config = useRuntimeConfig();
+    const tgToken = config.tgToken;
 
     const chat_id = (body.get("chatId")?.toString() ?? "").trim();
 
     const file = (body.get("file") as string) ?? ""; // Here, we explicitly cast to Blob | null
-    let fileName = body.get("fileName")?.toString();
+    const fileName = body.get("fileName")?.toString();
     const caption = body.get("caption")?.toString();
 
     if (!file || !fileName) {
@@ -25,37 +26,42 @@ export default defineEventHandler(async (event) => {
     if (!chat_id) throw new Error("chatId 必填");
     if (!functionName) throw new Error("functionName 必填");
     if (!file) throw new Error("文件地址必传"); // Ensure file exists
-    if (!config.public.tgToken) throw new Error("Telegram Bot Token 未配置");
+    if (!tgToken) throw new Error("Telegram Bot Token 未配置");
 
-    // 3. 处理文件类型和文件名修改（对 GIF 和 WebP 进行处理）
-    if (fileName) {
-      const fileExt = fileName.split(".").pop()?.toLowerCase();
-      if (fileExt === "gif" || fileExt === "webp" || fileExt === "svg") {
-        fileName = fileName.replace(/\.(gif|webp)$/, ".jpeg"); // Rename to .jpeg
-      }
+    const createTelegramFormData = (fieldName: string) => {
+      const formData = new FormData();
+      formData.append("chat_id", chat_id);
+      formData.append(fieldName, file);
+      if (caption) formData.append("caption", caption);
+      return formData;
+    };
+
+    // 5. 调用带重试的 Telegram 接口
+    let response;
+    try {
+      response = await fetchTelegramWithRetry({
+        token: tgToken,
+        method: functionName,
+        formData: createTelegramFormData(functionType),
+        headers: defaultHeaders,
+        timeout: 20_000,
+      });
+    } catch (error: any) {
+      if (functionName !== "sendPhoto") throw error;
+
+      console.warn(
+        "[telegram-upload] sendPhoto URL 转存失败，改用 sendDocument:",
+        error?.message ?? error
+      );
+
+      response = await fetchTelegramWithRetry({
+        token: tgToken,
+        method: "sendDocument",
+        formData: createTelegramFormData("document"),
+        headers: defaultHeaders,
+        timeout: 20_000,
+      });
     }
-
-    // 4. 组装 FormData
-    const formData = new FormData();
-    formData.append("chat_id", chat_id);
-
-    // Ensure that file is not null when appending to formData
-    if (file) {
-      formData.append(functionType, file);
-    } else {
-      throw new Error("文件数据无效");
-    }
-
-    if (caption) formData.append("caption", caption);
-
-    // 5. 调用带重试的 Telegram 接口（默认最多重试 2 次，总共 3 次请求）
-    const response = await fetchTelegramWithRetry({
-      token: config.public.tgToken,
-      method: functionName,
-      formData,
-      headers: defaultHeaders,
-      timeout: 20_000,
-    });
 
     // 6. 成功返回
     return {

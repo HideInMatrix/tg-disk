@@ -15,7 +15,6 @@ export default defineNuxtConfig({
   },
   modules: [
     "@nuxt/image",
-    "@nuxt/fonts",
     "@nuxt/scripts",
     "@unocss/nuxt",
     "shadcn-nuxt",
@@ -24,11 +23,11 @@ export default defineNuxtConfig({
   ],
 
   runtimeConfig: {
+    tgToken: process.env.NUXT_TG_TOKEN || process.env.NUXT_PUBLIC_TG_TOKEN,
     public: {
       auth: {
         loadStrategy: "client-only",
       },
-      tgToken: process.env.NUXT_PUBLIC_TG_TOKEN,
       tgChatId: process.env.NUXT_PUBLIC_TG_CHAT_ID,
       allowHosts: process.env.NUXT_PUBLIC_ALLOW_HOSTS,
       account: process.env.NUXT_PUBLIC_ACCOUNT,
