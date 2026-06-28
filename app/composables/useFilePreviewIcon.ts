@@ -21,7 +21,7 @@ export function useFilePreviewIcon(file: MaybeRefOrGetter<UploadableFile>) {
     return resolveFilePreviewMeta({
       fileName: currentFile.file?.name,
       responseFileName: currentFile.response?.data?.file_name,
-      url: currentFile.url,
+      url: currentFile.previewUrl || currentFile.url,
     }).fileExtension
   })
 
@@ -37,7 +37,7 @@ export function useFilePreviewIcon(file: MaybeRefOrGetter<UploadableFile>) {
     return resolveFilePreviewMeta({
       fileName: currentFile.file?.name,
       responseFileName: currentFile.response?.data?.file_name,
-      url: currentFile.url,
+      url: currentFile.previewUrl || currentFile.url,
     }).fileType
   })
 

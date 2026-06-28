@@ -143,7 +143,8 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
           status: "pending",
           progress: 0,
           response: null,
-          url: previewUrl, // 生成预览 URL
+          url: previewUrl,
+          previewUrl,
           fileExtension: previewMeta.fileExtension,
           fileType: previewMeta.fileType,
         });
@@ -163,7 +164,8 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
           status: "pending",
           progress: 0,
           response: null,
-          url: file, // 直接使用 URL 作为预览
+          url: file,
+          previewUrl: file,
           fileExtension: previewMeta.fileExtension,
           fileType: previewMeta.fileType,
         });

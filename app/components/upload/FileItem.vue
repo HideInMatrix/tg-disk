@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { toRef } from "vue"
+import { computed, toRef } from "vue"
 import { Motion } from "motion-v"
 import { Progress } from '~/components/ui/progress'
 import { cn } from "@/lib/utils"
@@ -15,6 +15,7 @@ const statusColors = {
   done: 'text-green-600',
   error: 'text-red-600'
 }
+const previewSrc = computed(() => item.value.previewUrl || item.value.url)
 const { isImage, previewIcon, extensionLabel } = useFilePreviewIcon(item)
 </script>
 
@@ -26,7 +27,7 @@ const { isImage, previewIcon, extensionLabel } = useFilePreviewIcon(item)
   >
     <!-- 预览图 -->
     <div class="h-20 w-20 shrink-0 overflow-hidden rounded-md border border-neutral-200 mr-4">
-      <img v-if="isImage" :src="item.url" class="h-full w-full object-cover" alt="preview" />
+      <img v-if="isImage" :src="previewSrc" class="h-full w-full object-cover" alt="preview" />
       <div
         v-else
         class="flex h-full w-full flex-col items-center justify-center gap-1 bg-neutral-50 text-neutral-500 dark:bg-neutral-900/60 dark:text-neutral-300"

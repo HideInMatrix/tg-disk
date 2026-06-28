@@ -15,7 +15,8 @@ type UploadableFilePreviewType =
   status: UploadStatus;
   progress: number;
   response: any;
-  url: string; // 预览图 URL
+  url: string;
+  previewUrl: string; // 只用于本地列表预览，不随上传结果变化
   fileExtension: string;
   fileType: UploadableFilePreviewType;
 }
