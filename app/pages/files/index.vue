@@ -46,7 +46,6 @@ const {
 const providerLabels: Record<string, string> = {
   all: "全部",
   telegram: "Telegram",
-  crossbell: "Crossbell",
   r2: "R2",
 };
 
@@ -92,7 +91,7 @@ function onDelete(rec: FileRecord) {
   const msg =
     rec.provider === "telegram"
       ? `确定删除「${rec.file_name}」？将同时尝试删除对应的 Telegram 消息。`
-      : `确定删除「${rec.file_name}」？IPFS 内容不可控，仅移除索引记录（内容可能仍可通过网关访问）。`;
+      : `确定删除「${rec.file_name}」？将同时删除对应的 Cloudflare R2 对象。`;
   if (window.confirm(msg)) remove(rec.id);
 }
 

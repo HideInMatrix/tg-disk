@@ -64,7 +64,10 @@ const innerUploadType = computed({
 });
 
 const r2Enabled = useR2Enabled();
-const diskLocked = computed(() => authRequired.value && !loggedIn.value && (innerUploadDisk.value === "telegram" || innerUploadDisk.value === "r2"));
+const diskLocked = computed(() =>
+  (authRequired.value && !loggedIn.value) ||
+  (innerUploadDisk.value === "r2" && !r2Enabled.value)
+);
 </script>
 
 <template>
@@ -75,9 +78,8 @@ const diskLocked = computed(() => authRequired.value && !loggedIn.value && (inne
           <TabsTrigger value="telegram">
             <div class="flex items-center gap-1">Telegram <LockKeyholeOpen :size="16" v-if="!authRequired || loggedIn" /> <LockKeyhole :size="16" v-else /></div>
           </TabsTrigger>
-          <TabsTrigger value="ipfs"> Crossbell IPFS </TabsTrigger>
-          <TabsTrigger v-if="r2Enabled" value="r2">
-            <div class="flex items-center gap-1">R2 <LockKeyholeOpen :size="16" v-if="!authRequired || loggedIn" /> <LockKeyhole :size="16" v-else /></div>
+          <TabsTrigger value="r2">
+            <div class="flex items-center gap-1">Cloudflare R2 <span v-if="!r2Enabled" class="text-xs text-neutral-400">未配置</span> <LockKeyholeOpen :size="16" v-if="!authRequired || loggedIn" /> <LockKeyhole :size="16" v-else /></div>
           </TabsTrigger>
         </TabsList>
       </Tabs>

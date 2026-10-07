@@ -1,6 +1,5 @@
 import { ref, computed, watch } from "vue";
 import { v4 as uuidv4 } from "uuid";
-import { useIPFS } from "~/composables/useIPFS";
 import { uploadFileToTelegram, uploadUrlToTelegram } from "~/composables/useTelegram";
 import { uploadFileToR2 } from "~/composables/useR2";
 import { useUploadLimit } from "~/composables/useUploadLimit";
@@ -30,6 +29,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
   // 文件索引：仅在配置了 Cloudflare 且 provider 受管时，于上传成功后记录（fire-and-forget，失败不影响上传）
   const runtimeConfig = useRuntimeConfig();
   const fileIndexEnabled = useFileIndexEnabled();
+  const r2Enabled = useR2Enabled();
 
   function recordUploadedFile(payload: RecordFilePayload) {
     if (!fileIndexEnabled.value) return;
@@ -44,7 +44,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
 
   const uploadType = ref<UploadType>("file");
   const uploadDisk = ref<UploadDisk>("telegram");
-  // 非 telegram（ipfs/r2）只支持文件上传，切换时重置上传方式，避免 url + 非 telegram 的无效组合
+  // R2 只支持文件上传，切换时重置上传方式，避免无效的 URL 转存组合
   watch(uploadDisk, (d) => {
     if (d !== "telegram") uploadType.value = "file";
   });
@@ -66,7 +66,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
     };
   });
 
-  // 核心上传逻辑：Telegram、Crossbell IPFS 和 R2
+  // 核心上传逻辑：Telegram 和 Cloudflare R2
   function uploadSingleFile({
     uFile,
     index,
@@ -86,12 +86,6 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
       uFile
     ) {
       return uploadToTelegramByUrl(uFile);
-    } else if (
-      uploadDisk.value === "ipfs" &&
-      uploadType.value === "file" &&
-      uFile
-    ) {
-      return uploadToIPFS(uFile);
     } else if (
       uploadDisk.value === "r2" &&
       uploadType.value === "file" &&
@@ -349,6 +343,10 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
   }
 
   function uploadToR2(uFile: UploadableFile): Promise<void> {
+    if (!r2Enabled.value) {
+      uFile.status = "error";
+      return Promise.reject(new Error("Cloudflare R2 未配置，无法上传"));
+    }
     return new Promise(async (resolve, reject) => {
       const index = files.value.findIndex((f) => f.id === uFile.id);
       if (!files.value[index]) return reject(new Error("Error File Index"));
@@ -379,61 +377,6 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
         reject(err);
       }
     });
-  }
-
-  function uploadToIPFS(uFile: UploadableFile): Promise<void> {
-    return new Promise(async (resolve, reject) => {
-      const index = files.value.findIndex((f) => f.id === uFile.id)
-      if (!files.value[index]) return reject(new Error('Error File Index'))
-      files.value[index].status = 'uploading'
-
-      try {
-        // useIPFS composable provides uploadFile and progress
-        const { uploadFile, progress } = useIPFS()
-        const unwatch = watch(progress, (p) => {
-          if (files.value[index]) files.value[index].progress = p
-        })
-
-        const result = await uploadFile(uFile.file)
-
-        if (!files.value[index]) {
-          unwatch()
-          return reject(new Error('Error File Index'))
-        }
-
-        const standardizedResponse = {
-          code: 200,
-          msg: 'ok',
-          data: {
-            file_id: result.cid || result.url || 'unknown',
-            file_name: uFile.file.name,
-            file_size: uFile.file.size,
-            cid: result.cid,
-          },
-        }
-
-        files.value[index].status = 'done'
-        files.value[index].progress = 100
-        files.value[index].response = standardizedResponse
-        files.value[index].url = `ipfs/crossbell/${standardizedResponse.data.cid}`
-
-        recordUploadedFile({
-          provider: "crossbell",
-          ref_id: standardizedResponse.data.cid ?? standardizedResponse.data.file_id,
-          url: `ipfs/crossbell/${standardizedResponse.data.cid}`,
-          file_name: uFile.file.name,
-          file_size: uFile.file.size,
-          file_type: uFile.fileType,
-          extra: { cid: standardizedResponse.data.cid },
-        })
-
-        unwatch()
-        resolve(standardizedResponse as any)
-      } catch (err) {
-        if (files.value[index]) files.value[index].status = 'error'
-        reject(err)
-      }
-    })
   }
 
   return {

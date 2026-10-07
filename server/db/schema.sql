@@ -4,14 +4,14 @@
 
 CREATE TABLE IF NOT EXISTS files (
   id         TEXT PRIMARY KEY,          -- server 生成 uuid
-  provider   TEXT NOT NULL,             -- 'telegram' | 'crossbell' | 'r2'
-  ref_id     TEXT NOT NULL,             -- file_id | cid | R2 object key
+  provider   TEXT NOT NULL,             -- 'telegram' | 'r2'
+  ref_id     TEXT NOT NULL,             -- file_id | R2 object key
   file_name  TEXT,
   file_size  INTEGER,                   -- 客户端数值 file.size
   file_type  TEXT,                      -- resolveFilePreviewType 结果
   url        TEXT NOT NULL,             -- 检索路径, e.g. file/<id>
   tags       TEXT,                      -- JSON 数组字符串
-  extra      TEXT,                      -- JSON: message_id, chat_id, cid ...
+  extra      TEXT,                      -- JSON: message_id, chat_id ...
   created_at INTEGER NOT NULL,          -- epoch ms
   updated_at INTEGER NOT NULL,
   UNIQUE (provider, ref_id)             -- 幂等：重试/双发不产生重复行

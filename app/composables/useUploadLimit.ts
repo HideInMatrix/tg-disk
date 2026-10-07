@@ -25,7 +25,6 @@ function createLimit(maxMiB: number) {
 export function useUploadLimit(currentDisk?: MaybeRefOrGetter<UploadDisk>) {
   const limits = computed(() => ({
     telegram: createLimit(10),
-    ipfs: createLimit(15),
     r2: createLimit(100),
   }))
 

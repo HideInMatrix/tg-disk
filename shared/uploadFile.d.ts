@@ -30,4 +30,4 @@ interface UseFileUploadOptions {
 
 type UploadType = "file" | "url";
 
-type UploadDisk = "telegram" | "ipfs" | "r2";
+type UploadDisk = "telegram" | "r2";

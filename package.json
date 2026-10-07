@@ -12,14 +12,12 @@
     "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
-    "@helia/unixfs": "^6.0.4",
     "@nuxt/image": "2.0.0",
     "@nuxt/scripts": "0.13.0",
     "@unhead/vue": "^2.1.12",
     "aws4fetch": "^1.0.20",
     "axios": "^1.13.6",
     "crypto": "^1.0.1",
-    "helia": "^6.0.22",
     "lucide-vue-next": "^0.553.0",
     "motion-v": "^1.10.3",
     "nuxt": "^4.4.2",

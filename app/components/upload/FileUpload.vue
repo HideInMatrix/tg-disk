@@ -21,6 +21,7 @@ interface FileUploadProps {
 const { ready, loggedIn } = useUserSession();
 const config = useRuntimeConfig();
 const authRequired = computed(() => Boolean(config.public.account && config.public.password));
+const r2Enabled = useR2Enabled();
 
 const props = defineProps<FileUploadProps>();
 const emit = defineEmits<{
@@ -48,17 +49,18 @@ watch(
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const isActive = ref(false);
 const urlAreaRef = useTemplateRef("urlArea");
-const currentDiskLabel = computed(() => {
-  if (uploadDisk.value === "telegram") return "Telegram";
-  if (uploadDisk.value === "r2") return "Cloudflare R2";
-  return "Crossbell IPFS";
-});
+const currentDiskLabel = computed(() => uploadDisk.value === "r2" ? "Cloudflare R2" : "Telegram");
+const r2Unavailable = computed(() => uploadDisk.value === "r2" && !r2Enabled.value);
 const uploadLimitHint = computed(() => {
   return `${currentDiskLabel.value} 单文件上限 ${currentUploadLimit.value.maxMiBLabel} (${currentUploadLimit.value.maxBytesLabel})`;
 });
 
 
 function handleFileChange(rawFiles: File[]) {
+  if (r2Unavailable.value) {
+    toast.error("Cloudflare R2 未配置，请先配置存储桶和访问密钥");
+    return;
+  }
   const { acceptedFiles, rejectedFiles } = addFiles(rawFiles);
   if (acceptedFiles.length > 0) {
     emit("onChange", acceptedFiles);
@@ -116,6 +118,18 @@ function handleDrop(e: DragEvent) {
         <div v-if="files.length !== 0" class="grid gap-3 mt-2">
           <FileItem v-for="file in files" :key="file.id" :item="file" />
         </div>
+      </div>
+
+      <!-- R2 标签始终可见；未配置时说明原因，不发送无效上传请求 -->
+      <div v-else-if="r2Unavailable" role="status" class="rounded-lg border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
+        <p class="font-medium">Cloudflare R2 尚未配置</p>
+        <p class="mt-2">请在部署环境中配置以下变量，再重新部署即可上传（单文件上限 100 MiB）：</p>
+        <ul class="mt-3 list-inside list-disc font-mono text-xs space-y-1">
+          <li>NUXT_CF_ACCOUNT_ID</li>
+          <li>NUXT_R2_ACCESS_KEY_ID</li>
+          <li>NUXT_R2_SECRET_ACCESS_KEY</li>
+          <li>NUXT_R2_BUCKET</li>
+        </ul>
       </div>
 
       <!-- 文件上传区域 -->

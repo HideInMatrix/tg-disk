@@ -1,4 +1,4 @@
-// DELETE /api/files/:id — 删除记录（Telegram 尽力删消息，IPFS 仅移除记录）
+// DELETE /api/files/:id — 删除记录（Telegram 尽力删消息，R2 删除对象）
 export default defineEventHandler(async (event) => {
   await assertFileIndex(event);
   const id = getRouterParam(event, "id");

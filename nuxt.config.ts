@@ -50,7 +50,7 @@ export default defineNuxtConfig({
       refererFlag: process.env.NUXT_PUBLIC_REFERER_FLAG === "true" ? true : false,
       // 可选：纳入管理的上传方式（逗号分隔），默认全开。启用状态由 /api/files/status 提供。
       fileIndexProviders:
-        process.env.NUXT_PUBLIC_FILE_INDEX_PROVIDERS || "telegram,crossbell,r2",
+        process.env.NUXT_PUBLIC_FILE_INDEX_PROVIDERS || "telegram,r2",
     },
   },
   shadcn: {

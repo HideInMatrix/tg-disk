@@ -195,7 +195,7 @@ export async function updateFile(id: string, patch: UpdateFilePayload): Promise<
   return getFileById(id);
 }
 
-/** 删除：移除索引记录；Telegram 尽力删除消息，IPFS 仅移除记录 */
+/** 删除：移除索引记录；Telegram 尽力删除消息，R2 删除对象 */
 export async function deleteFile(id: string): Promise<{ deleted: boolean; note?: string }> {
   const managed = await getManagedProviders();
   const record = await getFileById(id);
@@ -218,8 +218,6 @@ export async function deleteFile(id: string): Promise<{ deleted: boolean; note?:
   } else if (record.provider === "r2") {
     const ok = await r2Delete(record.ref_id);
     if (!ok) note = "R2 对象删除失败，但索引记录已移除";
-  } else {
-    note = "IPFS 内容不可控，仅移除索引记录（内容可能仍可通过网关访问）";
   }
 
   await d1Query(`DELETE FROM files WHERE id = ?`, [id]);

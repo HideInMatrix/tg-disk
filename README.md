@@ -9,7 +9,7 @@
 ### 特色
 
 1. 无限存储网盘
-2. ipfs,telegram存储方式
+2. Telegram 存储，可选 Cloudflare R2 对象存储
 3. 防盗措施
 4. 可选：Cloudflare D1 + KV 后台文件管理（记录 / 搜索 / 删除 / 重命名 / 标签）
 
@@ -70,7 +70,7 @@ Bot 必须具有频道管理员权限
 
 - **D1**（SQL 数据库）作为文件索引主库；**KV** 存运行时“管理范围”开关。免费额度：D1 5GB / 500 万行读每天 / 10 万行写每天；KV 10 万读每天 / 1000 写每天。
 - 应用自托管（非 Cloudflare 部署），通过 D1/KV 的 REST API 访问，需要一个 API Token。
-- 默认索引全部 3 种上传方式（Telegram、Crossbell、R2），可在后台或用 `NUXT_PUBLIC_FILE_INDEX_PROVIDERS` 分别开关。
+- 默认索引全部 2 种上传方式（Telegram、R2），可在后台或用 `NUXT_PUBLIC_FILE_INDEX_PROVIDERS` 分别开关。
 
 ### 启用步骤
 
@@ -91,7 +91,7 @@ Bot 必须具有频道管理员权限
    NUXT_CF_D1_DATABASE_ID=...
    NUXT_CF_KV_NAMESPACE_ID=...
    # 可选：默认全开
-   NUXT_PUBLIC_FILE_INDEX_PROVIDERS=telegram,crossbell,r2
+   NUXT_PUBLIC_FILE_INDEX_PROVIDERS=telegram,r2
    ```
 7. 重启应用。登录后首页右上角出现「文件管理」入口（`/files`）。
 
@@ -101,7 +101,7 @@ Bot 必须具有频道管理员权限
 
 - 索引从启用后开始累积，启用前上传的历史文件不会自动进入索引。
 - 删除 Telegram 文件会尝试调用 `deleteMessage` 删除频道消息（依赖启用后新捕获的 `message_id`）。
-- IPFS（Crossbell）内容不可控，“删除”仅移除索引记录，内容可能仍可通过网关访问。
+- 删除 R2 文件会尝试删除存储桶中的对象；删除失败时会提示原因，但索引记录仍会移除。
 
 ### 文件索引接口（需启用；配置了账号密码时需登录）
 
@@ -116,7 +116,7 @@ Bot 必须具有频道管理员权限
 
 ## （可选）Cloudflare R2 对象存储上传
 
-除 Telegram、IPFS 外，可选启用 **Cloudflare R2** 作为一个上传存储点（文件真正存到你的 R2 存储桶）。启用后上传页会多出 **R2** 标签；若同时启用了 D1 索引，R2 文件也会纳入 `/files` 后台管理，且**删除会真正删除 R2 对象**。不配置则不影响现有功能。
+除 Telegram 外，可选启用 **Cloudflare R2** 作为一个上传存储点（文件真正存到你的 R2 存储桶）。上传页始终显示 **Cloudflare R2** 标签；未配置时显示配置提示并禁用上传，配置后即可使用。若同时启用了 D1 索引，R2 文件也会纳入 `/files` 后台管理，且**删除会真正删除 R2 对象**。不配置则不影响现有功能。
 
 - 自托管应用通过 R2 的 **S3 兼容 API**（SigV4 签名，`aws4fetch`）上传/读取/删除；读取经服务端 `/r2/<key>` 代理转发（兼容私有桶，并受防盗链中间件保护）。
 - 免费额度：R2 每月 10GB 存储、100 万次 A 类（写）操作、1000 万次 B 类（读）操作，**出站流量免费**。
@@ -133,7 +133,7 @@ Bot 必须具有频道管理员权限
    NUXT_R2_SECRET_ACCESS_KEY=...
    NUXT_R2_BUCKET=tg-disk
    ```
-5. 上传页出现 **R2** 标签即可使用。
+5. 上传页选择 **Cloudflare R2** 标签；“未配置”提示消失后即可使用。
 
 > 配置了账号密码时，R2 上传接口要求登录（与 Telegram 一致，避免存储桶被匿名写入）。
 
@@ -286,51 +286,34 @@ const data = await response.json();
 
 ---
 
-### IPFS 文件上传
+### Cloudflare R2 文件上传
 
-#### POST `/api/ipfs/send`
+#### POST `/api/r2/send`
 
-上传文件到 IPFS
+需配置 R2。配置了账号密码时需登录，上传页单文件上限 100 MiB。
 
 **请求参数（FormData）：**
 
 | 字段     | 类型   | 必填 | 说明         |
 | -------- | ------ | ---- | ------------ |
 | file     | File   | ✓    | 要上传的文件 |
-| fileName | string | ✓    | 文件名       |
-| deviceId | string | -    | 设备 ID      |
-
-**请求示例：**
-
-```bash
-curl -X POST http://localhost:3000/api/ipfs/send \
-  -F "file=@/path/to/file.pdf" \
-  -F "fileName=document.pdf" \
-  -F "deviceId=device-123"
-```
-
-**JavaScript 示例：**
+| fileName | string | -    | 文件名，默认使用上传文件名 |
 
 ```javascript
 const formData = new FormData();
-formData.append("file", fileBlob); // File 对象
+formData.append("file", fileBlob);
 formData.append("fileName", "document.pdf");
-formData.append("deviceId", "device-123");
-
-const response = await fetch("/api/ipfs/send", {
-  method: "POST",
-  body: formData,
-});
-const data = await response.json();
+const response = await fetch("/api/r2/send", { method: "POST", body: formData });
+const result = await response.json();
+// result.code === 200 时，通过 /r2/<file_id> 读取文件。
 ```
-
-**响应参数：**
 
 ```json
 {
   "code": 200,
+  "msg": "ok",
   "data": {
-    "cid": "QmXxxx...",
+    "file_id": "<uuid>.pdf",
     "file_name": "document.pdf",
     "file_size": 102400
   }
