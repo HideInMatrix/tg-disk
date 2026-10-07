@@ -13,6 +13,11 @@ const fileTypeIconMap: Record<UploadableFilePreviewType, Component> = {
   file: File,
 }
 
+// 供无 UploadableFile 上下文的地方（如后台管理列表）按类型取图标
+export function getFileTypeIcon(fileType: UploadableFilePreviewType): Component {
+  return fileTypeIconMap[fileType] ?? File
+}
+
 export function useFilePreviewIcon(file: MaybeRefOrGetter<UploadableFile>) {
   const fileExtension = computed(() => {
     const currentFile = toValue(file)

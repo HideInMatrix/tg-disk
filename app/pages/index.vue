@@ -5,6 +5,8 @@ import FileUploadGrid from "~/components/upload/FileUploadGrid.vue";
 
 const config = useRuntimeConfig();
 const { clear, loggedIn } = useUserSession();
+const fileIndexEnabled = useFileIndexEnabled();
+const authRequired = computed(() => Boolean(config.public.account && config.public.password));
 
 const uploadExtraFormData = {
   chatId: config.public.tgChatId,
@@ -21,8 +23,11 @@ const handleLogout = async () => {
     <div class="max-w-6xl mx-auto p-6 min-h-screen flex flex-col">
       <div class="flex justify-between">
         <h1 class="text-2xl font-medium mb-4">MM盘</h1>
-        <div class="flex" v-if="loggedIn">
-          <Button @click="handleLogout">退出</Button>
+        <div class="flex items-center gap-2">
+          <NuxtLink v-if="fileIndexEnabled && (!authRequired || loggedIn)" to="/files">
+            <Button variant="outline">文件管理</Button>
+          </NuxtLink>
+          <Button v-if="loggedIn" @click="handleLogout">退出</Button>
         </div>
       </div>
       <div class="flex-1">

@@ -63,7 +63,8 @@ const innerUploadType = computed({
   set: (val) => emit("update:uploadType", val),
 });
 
-const telegramLocked = computed(() => authRequired.value && !loggedIn.value && innerUploadDisk.value === "telegram");
+const r2Enabled = useR2Enabled();
+const diskLocked = computed(() => authRequired.value && !loggedIn.value && (innerUploadDisk.value === "telegram" || innerUploadDisk.value === "r2"));
 </script>
 
 <template>
@@ -72,15 +73,18 @@ const telegramLocked = computed(() => authRequired.value && !loggedIn.value && i
       <Tabs v-model="innerUploadDisk">
         <TabsList>
           <TabsTrigger value="telegram">
-            <div class="flex items-center gap-1">中心化 <LockKeyholeOpen :size="16" v-if="!authRequired || loggedIn" /> <LockKeyhole :size="16" v-else /></div>
+            <div class="flex items-center gap-1">Telegram <LockKeyholeOpen :size="16" v-if="!authRequired || loggedIn" /> <LockKeyhole :size="16" v-else /></div>
           </TabsTrigger>
-          <TabsTrigger value="ipfs" disable> 去中心化 </TabsTrigger>
+          <TabsTrigger value="ipfs" disable> IPFS </TabsTrigger>
+          <TabsTrigger v-if="r2Enabled" value="r2">
+            <div class="flex items-center gap-1">R2 <LockKeyholeOpen :size="16" v-if="!authRequired || loggedIn" /> <LockKeyhole :size="16" v-else /></div>
+          </TabsTrigger>
         </TabsList>
       </Tabs>
       <Tabs v-model="innerUploadType">
         <TabsList>
-          <TabsTrigger value="file" :disabled="telegramLocked"> 文件上传 </TabsTrigger>
-          <TabsTrigger value="url" v-show="innerUploadDisk !== 'ipfs'" :disabled="authRequired && !loggedIn"> 文件地址转存 </TabsTrigger>
+          <TabsTrigger value="file" :disabled="diskLocked"> 文件上传 </TabsTrigger>
+          <TabsTrigger value="url" v-show="innerUploadDisk === 'telegram'" :disabled="authRequired && !loggedIn"> 文件地址转存 </TabsTrigger>
         </TabsList>
       </Tabs>
     </div>

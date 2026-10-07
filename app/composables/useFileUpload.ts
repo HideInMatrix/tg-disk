@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { useIPFS } from "~/composables/useIPFS";
 import { usePinMeIPFS } from "~/composables/usePinMeIPFS";
 import { uploadFileToTelegram, uploadUrlToTelegram } from "~/composables/useTelegram";
+import { uploadFileToR2 } from "~/composables/useR2";
 import { useUploadLimit } from "~/composables/useUploadLimit";
 import { getFileName, resolveFilePreviewMeta } from "@/lib/filePreview";
 
@@ -27,8 +28,27 @@ type AddFilesResult = {
 export function useFileUpload(options: UseFileUploadOptions = {}) {
   const files = ref<UploadableFile[]>([]);
 
+  // 文件索引：仅在配置了 Cloudflare 且 provider 受管时，于上传成功后记录（fire-and-forget，失败不影响上传）
+  const runtimeConfig = useRuntimeConfig();
+  const fileIndexEnabled = useFileIndexEnabled();
+
+  function recordUploadedFile(payload: RecordFilePayload) {
+    if (!fileIndexEnabled.value) return;
+    const providers = String(runtimeConfig.public.fileIndexProviders || "")
+      .split(",")
+      .map((s) => s.trim());
+    if (!providers.includes(payload.provider)) return;
+    $fetch("/api/files", { method: "POST", body: payload }).catch((err) => {
+      console.warn("[file-index] 记录失败", err);
+    });
+  }
+
   const uploadType = ref<UploadType>("file");
   const uploadDisk = ref<UploadDisk>("telegram");
+  // 非 telegram（ipfs/r2）只支持文件上传，切换时重置上传方式，避免 url + 非 telegram 的无效组合
+  watch(uploadDisk, (d) => {
+    if (d !== "telegram") uploadType.value = "file";
+  });
   const {
     limits: uploadLimits,
     currentLimit: currentUploadLimit,
@@ -74,6 +94,12 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
     ) {
       // return uploadToIPFS(uFile);
       return uploadToPinMeIPFS(uFile);
+    } else if (
+      uploadDisk.value === "r2" &&
+      uploadType.value === "file" &&
+      uFile
+    ) {
+      return uploadToR2(uFile);
     } else {
       return Promise.reject(new Error("Unsupported upload type or disk"));
     }
@@ -275,6 +301,15 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
         files.value[index].progress = 100;
         files.value[index].response = res;
         files.value[index].url = `file/${res.data.file_id}`
+        recordUploadedFile({
+          provider: "telegram",
+          ref_id: res.data.file_id,
+          url: `file/${res.data.file_id}`,
+          file_name: res.data.file_name ?? uFile.file.name,
+          file_size: res.data.file_size ?? uFile.file.size,
+          file_type: uFile.fileType,
+          extra: { message_id: res.data.message_id, chat_id: res.data.chat_id },
+        });
         resolve(res);
       } catch (err) {
         if (files.value[index]) files.value[index].status = "error";
@@ -298,6 +333,48 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
         files.value[index].progress = 100;
         files.value[index].response = res;
         files.value[index].url = `file/${res.data.file_id}`
+        recordUploadedFile({
+          provider: "telegram",
+          ref_id: res.data.file_id,
+          url: `file/${res.data.file_id}`,
+          file_name: res.data.file_name ?? uFile.file.name,
+          file_size: res.data.file_size ?? uFile.file.size,
+          file_type: uFile.fileType,
+          extra: { message_id: res.data.message_id, chat_id: res.data.chat_id },
+        });
+        resolve(res);
+      } catch (err) {
+        if (files.value[index]) files.value[index].status = "error";
+        reject(err);
+      }
+    });
+  }
+
+  function uploadToR2(uFile: UploadableFile): Promise<void> {
+    return new Promise(async (resolve, reject) => {
+      const index = files.value.findIndex((f) => f.id === uFile.id);
+      if (!files.value[index]) return reject(new Error("Error File Index"));
+      files.value[index].status = "uploading";
+
+      try {
+        const res = await uploadFileToR2(uFile, { extraFormData: options.extraFormData }, (p) => {
+          if (files.value[index]) files.value[index].progress = p;
+        });
+
+        if (!files.value[index]) return reject(new Error("Error File Index"));
+        files.value[index].status = "done";
+        files.value[index].progress = 100;
+        files.value[index].response = res;
+        files.value[index].url = `r2/${res.data.file_id}`;
+        recordUploadedFile({
+          provider: "r2",
+          ref_id: res.data.file_id,
+          url: `r2/${res.data.file_id}`,
+          file_name: res.data.file_name ?? uFile.file.name,
+          file_size: res.data.file_size ?? uFile.file.size,
+          file_type: uFile.fileType,
+          extra: {},
+        });
         resolve(res);
       } catch (err) {
         if (files.value[index]) files.value[index].status = "error";
@@ -341,6 +418,16 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
         files.value[index].progress = 100
         files.value[index].response = standardizedResponse
         files.value[index].url = `ipfs/crossbell/${standardizedResponse.data.cid}`
+
+        recordUploadedFile({
+          provider: "crossbell",
+          ref_id: standardizedResponse.data.cid ?? standardizedResponse.data.file_id,
+          url: `ipfs/crossbell/${standardizedResponse.data.cid}`,
+          file_name: uFile.file.name,
+          file_size: uFile.file.size,
+          file_type: uFile.fileType,
+          extra: { cid: standardizedResponse.data.cid },
+        })
 
         unwatch()
         resolve(standardizedResponse as any)
@@ -393,6 +480,16 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
         files.value[index].progress = 100
         files.value[index].response = standardizedResponse
         files.value[index].url = `ipfs/pinme/${standardizedResponse.data.shortUrl}`
+
+        recordUploadedFile({
+          provider: "pinme",
+          ref_id: standardizedResponse.data.shortUrl ?? standardizedResponse.data.file_id,
+          url: `ipfs/pinme/${standardizedResponse.data.shortUrl}`,
+          file_name: uFile.file.name,
+          file_size: uFile.file.size,
+          file_type: uFile.fileType,
+          extra: { hash: standardizedResponse.data.hash, traceId: standardizedResponse.data.traceId },
+        })
 
         unwatch()
         resolve(standardizedResponse as any)

@@ -3,6 +3,9 @@ export interface FileDetails {
   file_id: string;
   file_name: string;
   file_size: number;
+  // 消息级字段，用于后台管理删除对应的 Telegram 消息（deleteMessage 需要）
+  message_id?: number;
+  chat_id?: number | string;
 }
 
 export interface TelegramAPIResponse {

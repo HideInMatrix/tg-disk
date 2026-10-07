@@ -48,7 +48,11 @@ watch(
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const isActive = ref(false);
 const urlAreaRef = useTemplateRef("urlArea");
-const currentDiskLabel = computed(() => (uploadDisk.value === "telegram" ? "Telegram" : "PinMe IPFS"));
+const currentDiskLabel = computed(() => {
+  if (uploadDisk.value === "telegram") return "Telegram";
+  if (uploadDisk.value === "r2") return "Cloudflare R2";
+  return "PinMe IPFS";
+});
 const uploadLimitHint = computed(() => {
   return `${currentDiskLabel.value} 单文件上限 ${currentUploadLimit.value.maxMiBLabel} (${currentUploadLimit.value.maxBytesLabel})`;
 });
@@ -156,7 +160,7 @@ function handleDrop(e: DragEvent) {
         </div>
       </div>
 
-      <LoginOverlay v-if="authRequired && ready && !loggedIn && uploadDisk === 'telegram'" />
+      <LoginOverlay v-if="authRequired && ready && !loggedIn && (uploadDisk === 'telegram' || uploadDisk === 'r2')" />
     </div>
   </ClientOnly>
 </template>

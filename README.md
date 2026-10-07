@@ -11,6 +11,7 @@
 1. 无限存储网盘
 2. ipfs,telegram存储方式
 3. 防盗措施
+4. 可选：Cloudflare D1 + KV 后台文件管理（记录 / 搜索 / 删除 / 重命名 / 标签）
 
 ## telegram bot
 
@@ -62,6 +63,79 @@ Bot 必须具有频道管理员权限
 ### 配置参数
 
 点击项目进入设置->变量和机密->添加.env.example里的参数->重新部署
+
+## （可选）Cloudflare D1 + KV 文件索引与后台管理
+
+默认情况下上传结果只保留在当前页面，刷新即丢失。配置 Cloudflare D1 + KV 后，会记录每次上传的元数据，并在 `/files` 提供后台管理（浏览、搜索、分页、预览、复制直链、删除、重命名、标签）。**不配置则对现有功能零影响。**
+
+- **D1**（SQL 数据库）作为文件索引主库；**KV** 存运行时“管理范围”开关。免费额度：D1 5GB / 500 万行读每天 / 10 万行写每天；KV 10 万读每天 / 1000 写每天。
+- 应用自托管（非 Cloudflare 部署），通过 D1/KV 的 REST API 访问，需要一个 API Token。
+- 默认索引全部 3 种上传方式（Telegram、PinMe、Crossbell），可在后台或用 `NUXT_PUBLIC_FILE_INDEX_PROVIDERS` 分别开关。
+
+### 启用步骤
+
+1. 安装并登录 wrangler：`pnpm dlx wrangler login`
+2. 创建 D1 数据库并初始化表：
+   ```bash
+   pnpm dlx wrangler d1 create tg-disk-index          # 记下输出的 database_id
+   pnpm dlx wrangler d1 execute tg-disk-index --remote --file=./server/db/schema.sql
+   ```
+   （也可跳过初始化，应用首次写入时会自动建表。）
+3. 创建 KV 命名空间：`pnpm dlx wrangler kv namespace create tg-disk-settings`（记下 namespace_id）
+4. 在 Cloudflare Dashboard → My Profile → API Tokens 创建自定义 Token，权限：**Account · D1 · Edit** 与 **Account · Workers KV Storage · Edit**。
+5. 账户 ID 可在 Dashboard 右侧或用 `wrangler whoami` 获取。
+6. 配置环境变量（见 `.env.example`）：
+   ```
+   NUXT_CF_ACCOUNT_ID=...
+   NUXT_CF_API_TOKEN=...
+   NUXT_CF_D1_DATABASE_ID=...
+   NUXT_CF_KV_NAMESPACE_ID=...
+   # 可选：默认全开
+   NUXT_PUBLIC_FILE_INDEX_PROVIDERS=telegram,pinme,crossbell
+   ```
+7. 重启应用。登录后首页右上角出现「文件管理」入口（`/files`）。
+
+> 四项 `NUXT_CF_*` 都配置才会启用；建议同时配置 `NUXT_PUBLIC_ACCOUNT` / `NUXT_PUBLIC_PASSWORD` 开启登录，避免管理与删除接口对外开放。
+
+### 说明与限制
+
+- 索引从启用后开始累积，启用前上传的历史文件不会自动进入索引。
+- 删除 Telegram 文件会尝试调用 `deleteMessage` 删除频道消息（依赖启用后新捕获的 `message_id`）。
+- IPFS（PinMe/Crossbell）内容不可控，“删除”仅移除索引记录，内容可能仍可通过网关访问。
+
+### 文件索引接口（需启用；配置了账号密码时需登录）
+
+| 方法   | 路径                                    | 说明                                     |
+| ------ | --------------------------------------- | ---------------------------------------- |
+| GET    | `/api/files?page&pageSize&provider&q`   | 分页列出（provider 过滤、文件名搜索）    |
+| POST   | `/api/files`                            | 记录上传（前端上传成功后自动调用）       |
+| PATCH  | `/api/files/:id`                        | 重命名 / 标签                            |
+| DELETE | `/api/files/:id`                        | 删除记录（Telegram 尽力删消息）          |
+| GET    | `/api/files/settings`                   | 读取 provider 允许列表与受管开关         |
+| PUT    | `/api/files/settings`                   | 保存受管 provider 开关                   |
+
+## （可选）Cloudflare R2 对象存储上传
+
+除 Telegram、IPFS 外，可选启用 **Cloudflare R2** 作为一个上传存储点（文件真正存到你的 R2 存储桶）。启用后上传页会多出 **R2** 标签；若同时启用了 D1 索引，R2 文件也会纳入 `/files` 后台管理，且**删除会真正删除 R2 对象**。不配置则不影响现有功能。
+
+- 自托管应用通过 R2 的 **S3 兼容 API**（SigV4 签名，`aws4fetch`）上传/读取/删除；读取经服务端 `/r2/<key>` 代理转发（兼容私有桶，并受防盗链中间件保护）。
+- 免费额度：R2 每月 10GB 存储、100 万次 A 类（写）操作、1000 万次 B 类（读）操作，**出站流量免费**。
+
+### 启用步骤
+
+1. Cloudflare 面板左侧 **R2** → 创建存储桶（如 `tg-disk`）。
+2. R2 页面 **Manage R2 API Tokens → Create API Token**，权限选 **Object Read & Write**（可指定该桶）；创建后得到 **Access Key ID** 与 **Secret Access Key**（只显示一次）。
+3. 账户 ID 复用 `NUXT_CF_ACCOUNT_ID`（与 D1/KV 相同）。
+4. 配置环境变量（见 `.env.example`）后重启：
+   ```
+   NUXT_CF_ACCOUNT_ID=...
+   NUXT_R2_ACCESS_KEY_ID=...
+   NUXT_R2_SECRET_ACCESS_KEY=...
+   NUXT_R2_BUCKET=tg-disk
+   ```
+5. 上传页出现 **R2** 标签即可使用。
+
+> 配置了账号密码时，R2 上传接口要求登录（与 Telegram 一致，避免存储桶被匿名写入）。
 
 ## 接口文档
 
@@ -145,7 +219,8 @@ const data = await response.json();
     "file_id": "AgACAgIAAxkBAAI...",
     "file_name": "document.pdf",
     "file_size": 102400,
-    "message_id": 123
+    "message_id": 123,
+    "chat_id": -1234567890123
   }
 }
 ```
@@ -203,7 +278,8 @@ const data = await response.json();
     "file_id": "AgACAgIAAxkBAAI...",
     "file_name": "document.pdf",
     "file_size": 102400,
-    "message_id": 123
+    "message_id": 123,
+    "chat_id": -1234567890123
   }
 }
 ```

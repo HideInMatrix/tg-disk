@@ -15,6 +15,7 @@
     "@nuxt/image": "2.0.0",
     "@nuxt/scripts": "0.13.0",
     "@unhead/vue": "^2.1.12",
+    "aws4fetch": "^1.0.20",
     "axios": "^1.13.6",
     "crypto": "^1.0.1",
     "crypto-js": "^4.2.0",

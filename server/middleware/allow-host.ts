@@ -40,8 +40,8 @@ export default defineEventHandler(async (event) => {
   // 1. 没配置白名单就不做任何防盗链（方便本地调试）
   if (!allowHosts.length && !allowReferers.length) return;
 
-  // 2. 只对 /file/... 做防盗链，其它接口、页面一律放行
-  if (!path.startsWith("/file/")) return;
+  // 2. 只对 /file/... 和 /r2/... 做防盗链，其它接口、页面一律放行
+  if (!path.startsWith("/file/") && !path.startsWith("/r2/")) return;
 
   // 3. 检查 Host（访问你站点的域名）
   const host = getHeader(event, "host")?.split(":")[0] ?? "";

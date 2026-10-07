@@ -87,8 +87,14 @@ export async function fetchTelegramWithRetry(
 export function getFileInfo(responseData: {
   ok: any;
   description: any;
-  result: { photo: any[]; video: any; audio: any; document: any; sticker: any };
+  result: any;
 }) {
+  // 消息级字段（用于后台管理调用 deleteMessage 删除对应消息）
+  const message = {
+    message_id: responseData?.result?.message_id,
+    chat_id: responseData?.result?.chat?.id,
+  };
+
   const getFileDetails = (file: {
     file_id: any;
     file_name: any;
@@ -98,6 +104,7 @@ export function getFileInfo(responseData: {
     file_id: file.file_id,
     file_name: file.file_name || file.file_unique_id,
     file_size: file.file_size,
+    ...message,
   });
 
   try {
@@ -179,4 +186,29 @@ export function getTelegramFileType(
 
   // 如果没有匹配的类型，返回 undefined
   return undefined;
+}
+
+/**
+ * 删除 Telegram 消息（bot 删除自己发送的消息不受 48h 限制）
+ * @returns 是否删除成功；失败仅告警不抛错
+ */
+export async function deleteTelegramMessage(
+  token: string,
+  chatId: string | number,
+  messageId: number
+): Promise<boolean> {
+  try {
+    const res = await $fetch<{ ok?: boolean }>(
+      `https://api.telegram.org/bot${token}/deleteMessage`,
+      {
+        method: "POST",
+        body: { chat_id: chatId, message_id: messageId },
+        timeout: 15000,
+      }
+    );
+    return Boolean(res?.ok);
+  } catch (err: any) {
+    console.warn("[telegram] deleteMessage 失败:", err?.message ?? err);
+    return false;
+  }
 }
