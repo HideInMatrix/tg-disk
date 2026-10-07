@@ -51,7 +51,7 @@ const urlAreaRef = useTemplateRef("urlArea");
 const currentDiskLabel = computed(() => {
   if (uploadDisk.value === "telegram") return "Telegram";
   if (uploadDisk.value === "r2") return "Cloudflare R2";
-  return "PinMe IPFS";
+  return "Crossbell IPFS";
 });
 const uploadLimitHint = computed(() => {
   return `${currentDiskLabel.value} 单文件上限 ${currentUploadLimit.value.maxMiBLabel} (${currentUploadLimit.value.maxBytesLabel})`;

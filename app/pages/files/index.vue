@@ -20,7 +20,7 @@ import { getFileTypeIcon } from "~/composables/useFilePreviewIcon";
 
 definePageMeta({ middleware: "auth" });
 
-const config = useRuntimeConfig();
+const status = useFileIndexStatus();
 const enabled = useFileIndexEnabled();
 const { clear, loggedIn } = useUserSession();
 
@@ -46,17 +46,11 @@ const {
 const providerLabels: Record<string, string> = {
   all: "全部",
   telegram: "Telegram",
-  pinme: "PinMe",
   crossbell: "Crossbell",
+  r2: "R2",
 };
 
-const envProviders = computed(
-  () =>
-    String(config.public.fileIndexProviders || "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean) as FileIndexProvider[]
-);
+const envProviders = computed(() => status.value?.providers ?? []);
 
 onMounted(async () => {
   if (!enabled.value) return;

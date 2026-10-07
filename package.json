@@ -8,7 +8,8 @@
     "dev": "nuxt dev --host 0.0.0.0",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@helia/unixfs": "^6.0.4",
@@ -18,7 +19,6 @@
     "aws4fetch": "^1.0.20",
     "axios": "^1.13.6",
     "crypto": "^1.0.1",
-    "crypto-js": "^4.2.0",
     "helia": "^6.0.22",
     "lucide-vue-next": "^0.553.0",
     "motion-v": "^1.10.3",
@@ -32,7 +32,6 @@
   },
   "packageManager": "pnpm@10.18.1+sha512.77a884a165cbba2d8d1c19e3b4880eee6d2fcabd0d879121e282196b80042351d5eb3ca0935fa599da1dc51265cc68816ad2bddd2a2de5ea9fdf92adbec7cd34",
   "devDependencies": {
-    "@types/crypto-js": "^4.2.2",
     "@unocss/nuxt": "^66.6.7",
     "@unocss/preset-rem-to-px": "^66.6.7",
     "@unocss/preset-wind4": "^66.6.7",

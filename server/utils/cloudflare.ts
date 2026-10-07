@@ -4,7 +4,7 @@
 
 const CF_API_BASE = "https://api.cloudflare.com/client/v4";
 
-const ALL_PROVIDERS: FileIndexProvider[] = ["telegram", "pinme", "crossbell", "r2"];
+const ALL_PROVIDERS: FileIndexProvider[] = ["telegram", "crossbell", "r2"];
 
 interface D1QueryMeta {
   changes?: number;

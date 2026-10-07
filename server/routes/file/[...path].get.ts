@@ -57,17 +57,7 @@ export default defineEventHandler(async (event) => {
   }
   try {
     if (!fileUrl) {
-      const response = await fetch("https://4c552a81.pinit.eth.limo");
-      if (!response.ok) {
-        // 如果外部图片加载失败，你可以返回 404 或 500
-        throw createError({
-          statusCode: 404,
-          statusMessage: "Placeholder image not found",
-        });
-      }
-      setHeader(event, "Content-Type", "image/webp");
-      setHeader(event, "Cache-Control", "public, max-age=0");
-      return sendStream(event, response.body as ReadableStream);
+      throw createError({ statusCode: 404, message: "文件地址未找到" });
     }
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 20000);

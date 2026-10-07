@@ -1,7 +1,7 @@
 // Cloudflare D1 文件索引相关类型（全局环境声明，server 与 app 均可直接使用）
 
 // 纳入索引/管理的上传方式
-type FileIndexProvider = "telegram" | "pinme" | "crossbell" | "r2";
+type FileIndexProvider = "telegram" | "crossbell" | "r2";
 
 // D1 files 表的一行（tags/extra 已从 JSON 字符串解析为对象）
 interface FileRecord {

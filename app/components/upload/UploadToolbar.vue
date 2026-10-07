@@ -75,7 +75,7 @@ const diskLocked = computed(() => authRequired.value && !loggedIn.value && (inne
           <TabsTrigger value="telegram">
             <div class="flex items-center gap-1">Telegram <LockKeyholeOpen :size="16" v-if="!authRequired || loggedIn" /> <LockKeyhole :size="16" v-else /></div>
           </TabsTrigger>
-          <TabsTrigger value="ipfs" disable> IPFS </TabsTrigger>
+          <TabsTrigger value="ipfs"> Crossbell IPFS </TabsTrigger>
           <TabsTrigger v-if="r2Enabled" value="r2">
             <div class="flex items-center gap-1">R2 <LockKeyholeOpen :size="16" v-if="!authRequired || loggedIn" /> <LockKeyhole :size="16" v-else /></div>
           </TabsTrigger>

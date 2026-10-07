@@ -70,7 +70,7 @@ Bot 必须具有频道管理员权限
 
 - **D1**（SQL 数据库）作为文件索引主库；**KV** 存运行时“管理范围”开关。免费额度：D1 5GB / 500 万行读每天 / 10 万行写每天；KV 10 万读每天 / 1000 写每天。
 - 应用自托管（非 Cloudflare 部署），通过 D1/KV 的 REST API 访问，需要一个 API Token。
-- 默认索引全部 3 种上传方式（Telegram、PinMe、Crossbell），可在后台或用 `NUXT_PUBLIC_FILE_INDEX_PROVIDERS` 分别开关。
+- 默认索引全部 3 种上传方式（Telegram、Crossbell、R2），可在后台或用 `NUXT_PUBLIC_FILE_INDEX_PROVIDERS` 分别开关。
 
 ### 启用步骤
 
@@ -91,7 +91,7 @@ Bot 必须具有频道管理员权限
    NUXT_CF_D1_DATABASE_ID=...
    NUXT_CF_KV_NAMESPACE_ID=...
    # 可选：默认全开
-   NUXT_PUBLIC_FILE_INDEX_PROVIDERS=telegram,pinme,crossbell
+   NUXT_PUBLIC_FILE_INDEX_PROVIDERS=telegram,crossbell,r2
    ```
 7. 重启应用。登录后首页右上角出现「文件管理」入口（`/files`）。
 
@@ -101,7 +101,7 @@ Bot 必须具有频道管理员权限
 
 - 索引从启用后开始累积，启用前上传的历史文件不会自动进入索引。
 - 删除 Telegram 文件会尝试调用 `deleteMessage` 删除频道消息（依赖启用后新捕获的 `message_id`）。
-- IPFS（PinMe/Crossbell）内容不可控，“删除”仅移除索引记录，内容可能仍可通过网关访问。
+- IPFS（Crossbell）内容不可控，“删除”仅移除索引记录，内容可能仍可通过网关访问。
 
 ### 文件索引接口（需启用；配置了账号密码时需登录）
 
