@@ -3,10 +3,12 @@ import { toast } from "vue-sonner";
 
 /** 文件索引运行时状态（读公共 status 接口；SSR 阶段即取到，客户端无闪烁） */
 export function useFileIndexStatus() {
+  // SSR 内部请求需要转发当前 event.context（包括 Cloudflare R2 绑定）；普通 $fetch 会丢失。
+  const requestFetch = useRequestFetch();
   const { data } = useAsyncData(
     "file-index-status",
     () =>
-      $fetch<{
+      requestFetch<{
         data: { enabled: boolean; providers: FileIndexProvider[]; r2Enabled: boolean };
       }>("/api/files/status").then((r) => r.data),
     {

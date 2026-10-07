@@ -132,7 +132,7 @@ Bot 必须具有频道管理员权限
 
 > `.env` 中的 `NUXT_R2_BUCKET=tg-disk` 只是 S3 模式的桶名字符串，不会创建或模拟原生绑定。需要在本地测试绑定时，可使用 `NITRO_PRESET=cloudflare_pages pnpm build`，再运行 `pnpm dlx wrangler pages dev dist --r2=NUXT_R2_BUCKET`，使用 Wrangler 的本地模拟桶。
 
-本地回归验证（不访问真实桶）：`pnpm test`；再执行 `NITRO_PRESET=cloudflare_pages pnpm build && pnpm test:pages-r2`，使用内存 mock binding 验证构建后的 Pages Worker 状态、上传与读取。
+本地回归验证（不访问真实桶）：`pnpm test`；再执行 `NITRO_PRESET=cloudflare_pages pnpm build && pnpm test:pages-r2`，使用内存 mock binding 验证构建后的 Pages Worker 状态、首页 SSR hydration、上传与读取。
 
 ### 自托管 / 普通 Node：S3 兼容 API（保留兼容）
 

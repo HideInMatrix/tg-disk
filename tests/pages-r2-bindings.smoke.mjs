@@ -11,6 +11,19 @@ Object.assign(process.env, overrides);
 const { default: worker } = await import("../dist/_worker.js/index.js");
 const context = { waitUntil() {}, passThroughOnException() {} };
 
+// The upload toolbar is ClientOnly, but its status is hydrated from the home page's SSR payload.
+// Direct API checks alone miss a nested SSR fetch losing the Cloudflare request context.
+function ssrR2Enabled(html) {
+  const match = html.match(/<script[^>]*id="__NUXT_DATA__"[^>]*>(.*?)<\/script>/s);
+  assert.ok(match, "Home page must include a Nuxt hydration payload");
+  const payload = JSON.parse(match[1]);
+  const entry = payload.find((item) => item && typeof item === "object" && "file-index-status" in item);
+  assert.ok(entry, "File-index status must be resolved during SSR");
+  const status = payload[entry["file-index-status"]];
+  assert.ok(status && "r2Enabled" in status);
+  return payload[status.r2Enabled];
+}
+
 for (const name of ["NUXT_R2_BUCKET", "R2_BUCKET"]) {
   const objects = new Map();
   const bucket = {
@@ -34,6 +47,9 @@ for (const name of ["NUXT_R2_BUCKET", "R2_BUCKET"]) {
   const status = await fetch("/api/files/status");
   assert.equal(status.status, 200);
   assert.equal((await status.json()).data.r2Enabled, true);
+  const home = await fetch("/");
+  assert.equal(home.status, 200);
+  assert.equal(ssrR2Enabled(await home.text()), true, "SSR must preserve binding context, not hydrate a false status");
 
   const form = new FormData();
   form.append("file", new File(["binding-test"], "test.txt", { type: "text/plain" }));
@@ -50,9 +66,11 @@ for (const name of ["NUXT_R2_BUCKET", "R2_BUCKET"]) {
   assert.equal(read.headers.get("ETag"), '"test-etag"');
   assert.equal(await read.text(), "binding-test");
   assert.equal((await fetch("/r2/missing", { headers: { accept: "application/json" } })).status, 404);
-  console.log(`${name}: built Pages worker status/upload/read/404 passed`);
+  console.log(`${name}: built Pages worker status/SSR hydration/upload/read/404 passed`);
 }
 
 const status = await worker.fetch(new Request("https://example.test/api/files/status"), overrides, context);
 assert.equal((await status.json()).data.r2Enabled, false);
+const home = await worker.fetch(new Request("https://example.test/"), overrides, context);
+assert.equal(ssrR2Enabled(await home.text()), false);
 console.log("No binding: disabled; no cross-request binding leakage. No production objects touched.");

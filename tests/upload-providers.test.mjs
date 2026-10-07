@@ -356,3 +356,22 @@ test("indexed R2 deletion propagates the request binding from API to bucket", as
   assert.equal((await handler(event)).data.deleted, true);
   assert.ok(queries.some((sql) => sql.startsWith("DELETE")));
 });
+
+test("SSR status fetch forwards the originating request context instead of global $fetch", async () => {
+  const api = r2Module();
+  const event = boundEvent(mockBucket());
+  let calls = 0;
+  const { useFileIndexStatus } = loadModule("app/composables/useFileIndex.ts", {
+    vue, "vue-sonner": { toast: {} },
+  }, {
+    useRequestFetch: () => async (url) => {
+      assert.equal(url, "/api/files/status");
+      calls++;
+      return { data: { enabled: false, providers: [], r2Enabled: api.isR2Enabled(event) } };
+    },
+    $fetch: () => { throw new Error("Global fetch drops the SSR request binding"); },
+    useAsyncData: (_key, handler) => ({ data: handler() }),
+  });
+  assert.equal((await useFileIndexStatus()).r2Enabled, true);
+  assert.equal(calls, 1);
+});
