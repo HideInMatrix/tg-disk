@@ -196,7 +196,7 @@ export async function updateFile(id: string, patch: UpdateFilePayload): Promise<
 }
 
 /** 删除：移除索引记录；Telegram 尽力删除消息，R2 删除对象 */
-export async function deleteFile(id: string): Promise<{ deleted: boolean; note?: string }> {
+export async function deleteFile(id: string, event?: H3Event): Promise<{ deleted: boolean; note?: string }> {
   const managed = await getManagedProviders();
   const record = await getFileById(id);
   if (!record || !managed.includes(record.provider)) {
@@ -216,7 +216,7 @@ export async function deleteFile(id: string): Promise<{ deleted: boolean; note?:
       note = "缺少 message_id，无法删除 Telegram 消息，仅移除索引记录";
     }
   } else if (record.provider === "r2") {
-    const ok = await r2Delete(record.ref_id);
+    const ok = await r2Delete(record.ref_id, event);
     if (!ok) note = "R2 对象删除失败，但索引记录已移除";
   }
 

@@ -1,10 +1,10 @@
-// POST /api/r2/send — 服务端签名上传文件到 Cloudflare R2（S3 兼容 API）
+// POST /api/r2/send — 通过绑定或 S3 上传文件到 Cloudflare R2（S3 兼容 API）
 export default defineEventHandler(async (event) => {
   try {
-    if (!isR2Enabled()) throw createError({ statusCode: 503, message: "R2 未配置" });
+    if (!isR2Enabled(event)) throw createError({ statusCode: 503, message: "R2 未配置" });
 
     // 写入自己的存储桶属敏感操作：配置了账号密码时要求登录
-    const config = useRuntimeConfig();
+    const config = useRuntimeConfig(event);
     const authRequired = Boolean(config.public.account && config.public.password);
     if (authRequired) await requireUserSession(event);
 
@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
     const key = `${crypto.randomUUID()}${ext}`;
     const contentType = filePart.type || "application/octet-stream";
 
-    await r2Put(key, filePart.data, contentType);
+    await r2Put(key, filePart.data, contentType, event);
 
     return {
       code: 200,

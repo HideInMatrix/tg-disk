@@ -31,7 +31,7 @@ export default defineNuxtConfig({
       d1DatabaseId: process.env.NUXT_CF_D1_DATABASE_ID,
       kvNamespaceId: process.env.NUXT_CF_KV_NAMESPACE_ID,
     },
-    // 可选：Cloudflare R2 对象存储上传（S3 兼容 API；accountId 复用 cf.accountId）
+    // 可选：自托管 R2 S3 凭据；Pages 原生绑定从 event.context.cloudflare.env 读取，无需密钥
     r2: {
       accessKeyId: process.env.NUXT_R2_ACCESS_KEY_ID,
       secretAccessKey: process.env.NUXT_R2_SECRET_ACCESS_KEY,

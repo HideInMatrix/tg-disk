@@ -118,22 +118,37 @@ Bot 必须具有频道管理员权限
 
 除 Telegram 外，可选启用 **Cloudflare R2** 作为一个上传存储点（文件真正存到你的 R2 存储桶）。上传页始终显示 **Cloudflare R2** 标签；未配置时显示配置提示并禁用上传，配置后即可使用。若同时启用了 D1 索引，R2 文件也会纳入 `/files` 后台管理，且**删除会真正删除 R2 对象**。不配置则不影响现有功能。
 
-- 自托管应用通过 R2 的 **S3 兼容 API**（SigV4 签名，`aws4fetch`）上传/读取/删除；读取经服务端 `/r2/<key>` 代理转发（兼容私有桶，并受防盗链中间件保护）。
-- 免费额度：R2 每月 10GB 存储、100 万次 A 类（写）操作、1000 万次 B 类（读）操作，**出站流量免费**。
+### Cloudflare Pages：使用原生 R2 绑定（推荐）
 
-### 启用步骤
+1. 在 R2 面板创建存储桶（例如 `tg-disk`），保持私有，不需要开启公共访问。
+2. 打开 Pages 项目 → **设置 → 绑定 → 添加 → R2 存储桶**。
+3. 绑定名称填写 **`NUXT_R2_BUCKET`**（也支持 `R2_BUCKET`），选择 `tg-disk`。
+4. 对要使用的生产 / 预览环境分别配置绑定，再重新部署。
+5. 打开 `/api/files/status`，`r2Enabled: true` 即表示当前请求识别到了绑定。
 
-1. Cloudflare 面板左侧 **R2** → 创建存储桶（如 `tg-disk`）。
-2. R2 页面 **Manage R2 API Tokens → Create API Token**，权限选 **Object Read & Write**（可指定该桶）；创建后得到 **Access Key ID** 与 **Secret Access Key**（只显示一次）。
-3. 账户 ID 复用 `NUXT_CF_ACCOUNT_ID`（与 D1/KV 相同）。
-4. 配置环境变量（见 `.env.example`）后重启：
+**原生绑定不需要 `NUXT_R2_ACCESS_KEY_ID`、`NUXT_R2_SECRET_ACCESS_KEY` 或 R2 的账户 ID。** 绑定通过当前请求的 `event.context.cloudflare.env`（本项目使用 Nitro 2）提供 `R2Bucket` 对象；上传、读取和删除直接调用桶的 `put/get/delete`，不经过 S3 签名。读取仍通过本站 `/r2/<key>` 流式代理，并保持登录及防盗链逻辑。
+
+官方文档：[Pages Functions 绑定](https://developers.cloudflare.com/pages/functions/bindings/#r2-buckets)、[Nitro 2 的 Cloudflare 请求上下文](https://v2.nitro.build/deploy/providers/cloudflare#direct-access-to-cloudflare-bindings)。
+
+> `.env` 中的 `NUXT_R2_BUCKET=tg-disk` 只是 S3 模式的桶名字符串，不会创建或模拟原生绑定。需要在本地测试绑定时，可使用 `NITRO_PRESET=cloudflare_pages pnpm build`，再运行 `pnpm dlx wrangler pages dev dist --r2=NUXT_R2_BUCKET`，使用 Wrangler 的本地模拟桶。
+
+本地回归验证（不访问真实桶）：`pnpm test`；再执行 `NITRO_PRESET=cloudflare_pages pnpm build && pnpm test:pages-r2`，使用内存 mock binding 验证构建后的 Pages Worker 状态、上传与读取。
+
+### 自托管 / 普通 Node：S3 兼容 API（保留兼容）
+
+没有原生绑定时才回退到 S3 模式，使用 `aws4fetch` 做 SigV4 签名。
+
+1. 在 R2 的 API 令牌面板创建仅允许目标桶对象读写的凭据。
+2. 设置以下环境变量后重启：
    ```
    NUXT_CF_ACCOUNT_ID=...
    NUXT_R2_ACCESS_KEY_ID=...
    NUXT_R2_SECRET_ACCESS_KEY=...
    NUXT_R2_BUCKET=tg-disk
    ```
-5. 上传页选择 **Cloudflare R2** 标签；“未配置”提示消失后即可使用。
+3. 上传页选择 **Cloudflare R2** 标签；“未配置”提示消失后即可使用。
+
+原生绑定始终优先；绑定操作失败不会切换到另一套 S3 凭据，避免误写不同的桶。
 
 > 配置了账号密码时，R2 上传接口要求登录（与 Telegram 一致，避免存储桶被匿名写入）。
 

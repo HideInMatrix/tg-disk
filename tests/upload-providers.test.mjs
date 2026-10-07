@@ -167,3 +167,192 @@ for (const enabled of [false, true]) {
     assert.equal(html.includes("未配置"), !enabled);
   });
 }
+
+function r2Module(config = {}, fetch = () => { throw new Error("Unexpected S3 fallback"); }) {
+  let clients = 0;
+  const api = loadModule("server/utils/r2.ts", {
+    aws4fetch: { AwsClient: class {
+      constructor() { clients++; }
+      fetch(...args) { return fetch(...args); }
+    } },
+  }, {
+    useRuntimeConfig: () => config,
+    createError: (details) => Object.assign(new Error(details.message), details),
+    Response, Headers,
+    console: { error() {} },
+  });
+  return { ...api, clients: () => clients };
+}
+
+function boundEvent(bucket, name = "NUXT_R2_BUCKET") {
+  return { context: { cloudflare: { env: { [name]: bucket } } } };
+}
+
+function mockBucket(overrides = {}) {
+  return { put: async () => {}, get: async () => null, delete: async () => {}, ...overrides };
+}
+
+for (const name of ["NUXT_R2_BUCKET", "R2_BUCKET"]) {
+  test(`Pages ${name} binding enables R2 without credentials and stays request-local`, () => {
+    const api = r2Module();
+    assert.equal(api.isR2Enabled(boundEvent(mockBucket(), name)), true);
+    assert.equal(api.isR2Enabled({ context: {} }), false);
+    assert.equal(api.isR2Enabled(boundEvent("tg-disk", name)), false);
+    assert.equal(api.isR2Enabled(boundEvent({ put() {}, get() {} }, name)), false);
+    assert.equal(api.clients(), 0);
+  });
+}
+
+test("native binding handles upload, streamed read metadata, missing objects and delete", async () => {
+  const calls = [];
+  const body = new Uint8Array([1, 2, 3]);
+  const bucket = mockBucket({
+    put: async (...args) => calls.push(["put", ...args]),
+    get: async (key) => key === "missing" ? null : {
+      body: new Response(body).body,
+      size: body.length,
+      httpEtag: '"native-etag"',
+      writeHttpMetadata: (headers) => headers.set("Content-Type", "image/png"),
+    },
+    delete: async (key) => calls.push(["delete", key]),
+  });
+  const event = boundEvent(bucket);
+  const api = r2Module();
+  await api.r2Put("folder/test.png", body, "image/png", event);
+  assert.equal(calls[0][1], "folder/test.png");
+  assert.equal(calls[0][2], body);
+  assert.equal(calls[0][3].httpMetadata.contentType, "image/png");
+  const response = await api.r2Get("folder/test.png", event);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("content-type"), "image/png");
+  assert.equal(response.headers.get("content-length"), "3");
+  assert.equal(response.headers.get("etag"), '"native-etag"');
+  assert.deepEqual(new Uint8Array(await response.arrayBuffer()), body);
+  assert.equal((await api.r2Get("missing", event)).status, 404);
+  assert.equal(await api.r2Delete("folder/test.png", event), true);
+  assert.deepEqual(calls[1], ["delete", "folder/test.png"]);
+  assert.equal(api.clients(), 0);
+});
+
+const s3Config = {
+  cf: { accountId: "account" },
+  r2: { accessKeyId: "access", secretAccessKey: "secret", bucket: "files" },
+};
+
+test("binding errors never fall back to S3 even when credentials are present", async () => {
+  const fail = async () => { throw new Error("Binding failure"); };
+  const event = boundEvent(mockBucket({ put: fail, get: fail, delete: fail }));
+  const api = r2Module(s3Config);
+  await assert.rejects(api.r2Put("key", new Uint8Array(), "text/plain", event), { statusCode: 502 });
+  await assert.rejects(api.r2Get("key", event), { statusCode: 502 });
+  assert.equal(await api.r2Delete("key", event), false);
+  assert.equal(api.clients(), 0);
+});
+
+test("self-hosted S3 fallback retains put/get/delete and URL escaping", async () => {
+  const calls = [];
+  const api = r2Module(s3Config, async (url, options) => {
+    calls.push({ url, options });
+    return options.method === "DELETE" ? new Response(null, { status: 404 }) : new Response("ok");
+  });
+  const event = { context: {} };
+  await api.r2Put("folder/a b#.txt", new Uint8Array([1]), "text/plain", event);
+  assert.equal(await (await api.r2Get("folder/a b#.txt", event)).text(), "ok");
+  assert.equal(await api.r2Delete("folder/a b#.txt", event), true);
+  assert.deepEqual(calls.map(({ options }) => options.method), ["PUT", "GET", "DELETE"]);
+  assert.ok(calls.every(({ url }) => url === "https://account.r2.cloudflarestorage.com/files/folder/a%20b%23.txt"));
+  assert.equal(calls[0].options.headers["content-type"], "text/plain");
+  assert.equal(api.clients(), 3);
+});
+
+test("public status uses the current request binding rather than global configuration", () => {
+  const api = r2Module();
+  const handler = loadModule("server/api/files/status.get.ts", {}, {
+    defineEventHandler: (handler) => handler,
+    isFileIndexEnabled: () => false,
+    getIndexProviders: () => [],
+    isR2Enabled: api.isR2Enabled,
+  }).default;
+  assert.equal(handler(boundEvent(mockBucket())).data.r2Enabled, true);
+  assert.equal(handler({ context: {} }).data.r2Enabled, false);
+});
+
+test("multipart upload propagates event and preserves login enforcement", async () => {
+  const event = boundEvent(mockBucket());
+  const data = Buffer.from("hello");
+  const calls = [];
+  const handler = loadModule("server/api/r2/send.post.ts", {}, {
+    defineEventHandler: (handler) => handler,
+    isR2Enabled: (current) => { assert.equal(current, event); return true; },
+    useRuntimeConfig: (current) => {
+      assert.equal(current, event);
+      return { public: { account: "user", password: "password" } };
+    },
+    requireUserSession: async (current) => { assert.equal(current, event); calls.push("auth"); },
+    readMultipartFormData: async () => [{ name: "file", filename: "hello.txt", type: "text/plain", data }],
+    crypto: { randomUUID: () => "uuid" },
+    r2Put: async (key, body, type, current) => {
+      assert.equal(current, event);
+      assert.equal(key, "uuid.txt");
+      assert.equal(body, data);
+      assert.equal(type, "text/plain");
+      calls.push("put");
+    },
+  }).default;
+  assert.equal((await handler(event)).code, 200);
+  assert.deepEqual(calls, ["auth", "put"]);
+});
+
+test("private-bucket download forwards event, stream, length, type and etag", async () => {
+  const event = boundEvent(mockBucket());
+  const response = new Response("hello", { headers: {
+    "Content-Type": "text/plain", "Content-Length": "5", ETag: '"etag"',
+  } });
+  const headers = {};
+  const handler = loadModule("server/routes/r2/[...path].get.ts", {
+    h3: { createError: (details) => Object.assign(new Error(details.message), details) },
+    "~~/server/utils/fileType": { getMimeType: () => "application/octet-stream" },
+  }, {
+    defineEventHandler: (handler) => handler,
+    isR2Enabled: (current) => { assert.equal(current, event); return true; },
+    getRouterParams: () => ({ path: ["folder", "hello.txt"] }),
+    r2Get: async (key, current) => {
+      assert.equal(current, event);
+      assert.equal(key, "folder/hello.txt");
+      return response;
+    },
+    setHeader: (current, name, value) => { assert.equal(current, event); headers[name] = value; },
+    sendStream: (current, body) => { assert.equal(current, event); return body; },
+  }).default;
+  assert.equal(await handler(event), response.body);
+  assert.equal(headers["Content-Type"], "text/plain");
+  assert.equal(headers["Content-Length"], "5");
+  assert.equal(headers.ETag, '"etag"');
+});
+
+test("indexed R2 deletion propagates the request binding from API to bucket", async () => {
+  const event = boundEvent(mockBucket());
+  const queries = [];
+  const { deleteFile } = loadModule("server/utils/fileIndex.ts", {}, {
+    getIndexProviders: () => ["r2"],
+    kvGet: async () => null,
+    ensureFileIndexSchema: async () => {},
+    d1Query: async (sql) => {
+      queries.push(sql);
+      return { results: sql.startsWith("SELECT") ? [{ id: "id", provider: "r2", ref_id: "key", url: "r2/key" }] : [] };
+    },
+    r2Delete: async (key, current) => {
+      assert.equal(key, "key");
+      assert.equal(current, event);
+      return true;
+    },
+  });
+  const handler = loadModule("server/api/files/[id].delete.ts", {}, {
+    defineEventHandler: (handler) => handler,
+    assertFileIndex: async (current) => assert.equal(current, event),
+    getRouterParam: () => "id",
+    deleteFile,
+  }).default;
+  assert.equal((await handler(event)).data.deleted, true);
+  assert.ok(queries.some((sql) => sql.startsWith("DELETE")));
+});

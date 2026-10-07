@@ -58,7 +58,7 @@ const uploadLimitHint = computed(() => {
 
 function handleFileChange(rawFiles: File[]) {
   if (r2Unavailable.value) {
-    toast.error("Cloudflare R2 未配置，请先配置存储桶和访问密钥");
+    toast.error("Cloudflare R2 未配置，请先添加 R2 存储桶绑定或配置 S3 凭据");
     return;
   }
   const { acceptedFiles, rejectedFiles } = addFiles(rawFiles);
@@ -123,7 +123,8 @@ function handleDrop(e: DragEvent) {
       <!-- R2 标签始终可见；未配置时说明原因，不发送无效上传请求 -->
       <div v-else-if="r2Unavailable" role="status" class="rounded-lg border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
         <p class="font-medium">Cloudflare R2 尚未配置</p>
-        <p class="mt-2">请在部署环境中配置以下变量，再重新部署即可上传（单文件上限 100 MiB）：</p>
+        <p class="mt-2">Cloudflare Pages：在「设置 → 绑定」添加 R2 存储桶，绑定名填写 <code class="font-mono">NUXT_R2_BUCKET</code>（或 R2_BUCKET），选择你的桶后重新部署。无需 Access Key / Secret Key。</p>
+        <p class="mt-2">自托管 / 普通 Node 环境才需要以下环境变量，单文件上限 100 MiB：</p>
         <ul class="mt-3 list-inside list-disc font-mono text-xs space-y-1">
           <li>NUXT_CF_ACCOUNT_ID</li>
           <li>NUXT_R2_ACCESS_KEY_ID</li>
