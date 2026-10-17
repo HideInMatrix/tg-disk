@@ -39,9 +39,22 @@ Manage Channel -> administrators -> 开启除了Add New admins之外的所有权
 频道 ID 前面有 - 号时需要保留
 Bot 必须具有频道管理员权限
 
+## API Key 认证（必填）
+
+在服务器的 `.env`（Cloudflare Pages 则在变量和机密中设置为 Secret）配置 `NUXT_API_KEY`，至少 32 字符，由部署者自行生成并保管。请勿使用 `NUXT_PUBLIC_` 前缀、提交到 Git 或写进前端代码。另为网页会话设置独立的 `NUXT_SESSION_PASSWORD`（至少 32 字符）。
+
+```dotenv
+NUXT_API_KEY=请自行填写至少32字符的私密APIKey
+NUXT_SESSION_PASSWORD=请自行填写不同的长随机字符串
+```
+
+浏览器访问 `/login`，输入 API Key 验证后获得安全的服务端会话（不会将 Key 保存在数据库或浏览器本地存储中）。外部 Agent / 脚本可直接通过请求头 `X-API-Key: <你的 API Key>` 调用上传和文件管理 API。**不要把 API Key 放进公开分发的客户端应用或第三方网页。**
+
+旧的 `NUXT_PUBLIC_ACCOUNT`、`NUXT_PUBLIC_PASSWORD` 已停用，应从部署环境中删除。未配置有效 Key 时敏感接口拒绝操作；修改 Key 后请重新部署并重新登录。请确保全站通过 HTTPS 提供服务。会话 Cookie 仍可以在有效期内使用；如需立刻撤销现有会话，还应轮换 `NUXT_SESSION_PASSWORD`。
+
 ## .env.example
 
-将 .env.example 里面的参数改成自己的参数，并且将.env.example 改成.env
+复制 `.env.example` 为 `.env`，填写服务器专用机密以及所需的存储服务配置。
 
 ## cloudflare workers 部署
 
@@ -95,7 +108,7 @@ Bot 必须具有频道管理员权限
    ```
 7. 重启应用。登录后首页右上角出现「文件管理」入口（`/files`）。
 
-> 四项 `NUXT_CF_*` 都配置才会启用；建议同时配置 `NUXT_PUBLIC_ACCOUNT` / `NUXT_PUBLIC_PASSWORD` 开启登录，避免管理与删除接口对外开放。
+> 四项 `NUXT_CF_*` 都配置才会启用。文件管理和上传写入接口必须通过 `NUXT_API_KEY` 验证，不会因未配置 API Key 而允许匿名写入。
 
 ### 说明与限制
 
@@ -103,7 +116,7 @@ Bot 必须具有频道管理员权限
 - 删除 Telegram 文件会尝试调用 `deleteMessage` 删除频道消息（依赖启用后新捕获的 `message_id`）。
 - 删除 R2 文件会尝试删除存储桶中的对象；删除失败时会提示原因，但索引记录仍会移除。
 
-### 文件索引接口（需启用；配置了账号密码时需登录）
+### 文件索引接口（需启用；始终要求 API Key 请求头或已验证的网页登录会话）
 
 | 方法   | 路径                                    | 说明                                     |
 | ------ | --------------------------------------- | ---------------------------------------- |
@@ -150,7 +163,7 @@ Bot 必须具有频道管理员权限
 
 原生绑定始终优先；绑定操作失败不会切换到另一套 S3 凭据，避免误写不同的桶。
 
-> 配置了账号密码时，R2 上传接口要求登录（与 Telegram 一致，避免存储桶被匿名写入）。
+> R2 和 Telegram 上传接口均要求 API Key 请求头或已经验证的网页会话，避免匿名写入。
 
 ## 接口文档
 
@@ -158,28 +171,28 @@ Bot 必须具有频道管理员权限
 
 #### POST `/api/auth`
 
-用户登录接口
+浏览器会话验证接口，使用部署者自行在服务端设置的 API Key。
 
 **请求参数：**
 
 ```json
 {
-  "account": "user@example.com",
-  "password": "password123"
+  "apiKey": "YOUR_API_KEY"
 }
 ```
 
 **响应参数：**
 
-- 登录成功：`{ "code": 200, "data": true }`
-- 登录失败：`{ "code": 401, "data": false }`
+- 验证成功（HTTP 200）：`{ "code": 200, "data": true }`
+- Key 不正确：HTTP 401
+- 服务端未配置有效 Key：HTTP 503
 
 **说明：**
 
-- 账号密码从环境变量 `NUXT_PUBLIC_ACCOUNT` 和 `NUXT_PUBLIC_PASSWORD` 获取
-- Telegram Bot Token 从服务端私有环境变量 `NUXT_TG_TOKEN` 获取
-- 如果未配置环境变量，则任何请求都会登录成功
-- 登录成功后会设置用户 Session，有效期为 7 天
+- `NUXT_API_KEY` 为服务端私有配置，不写入数据库、不暴露给浏览器运行时配置。
+- 外部程序使用 `X-API-Key` 请求头调用上传和文件管理接口，无需通过 `/api/auth` 登录。
+- Telegram Bot Token 仍从服务端私有变量 `NUXT_TG_TOKEN` 获取。
+- 登录成功后设置有效期 7 天的会话；轮换密钥后要立即失效已有会话时，同时轮换 `NUXT_SESSION_PASSWORD`。
 
 ---
 

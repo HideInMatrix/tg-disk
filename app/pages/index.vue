@@ -6,7 +6,7 @@ import FileUploadGrid from "~/components/upload/FileUploadGrid.vue";
 const config = useRuntimeConfig();
 const { clear, loggedIn } = useUserSession();
 const fileIndexEnabled = useFileIndexEnabled();
-const authRequired = computed(() => Boolean(config.public.account && config.public.password));
+const authRequired = computed(() => config.public.authRequired);
 
 const uploadExtraFormData = {
   chatId: config.public.tgChatId,

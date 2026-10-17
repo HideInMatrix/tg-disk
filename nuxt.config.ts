@@ -24,6 +24,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     tgToken: process.env.NUXT_TG_TOKEN || process.env.NUXT_PUBLIC_TG_TOKEN,
+    apiKey: process.env.NUXT_API_KEY || "",
     // 可选：Cloudflare D1 + KV 文件索引（运行时可被 NUXT_CF_* 覆盖；不暴露给客户端）
     cf: {
       accountId: process.env.NUXT_CF_ACCOUNT_ID,
@@ -44,8 +45,7 @@ export default defineNuxtConfig({
       },
       tgChatId: process.env.NUXT_PUBLIC_TG_CHAT_ID,
       allowHosts: process.env.NUXT_PUBLIC_ALLOW_HOSTS,
-      account: process.env.NUXT_PUBLIC_ACCOUNT,
-      password: process.env.NUXT_PUBLIC_PASSWORD,
+      authRequired: true,
       allowReferers: process.env.NUXT_PUBLIC_ALLOW_REFERERS,
       refererFlag: process.env.NUXT_PUBLIC_REFERER_FLAG === "true" ? true : false,
       // 可选：纳入管理的上传方式（逗号分隔），默认全开。启用状态由 /api/files/status 提供。

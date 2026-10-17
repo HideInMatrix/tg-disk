@@ -50,11 +50,7 @@ export async function assertFileIndex(event: H3Event): Promise<void> {
   if (!isFileIndexEnabled()) {
     throw createError({ statusCode: 503, message: "文件索引未启用" });
   }
-  const config = useRuntimeConfig();
-  const authRequired = Boolean(config.public.account && config.public.password);
-  if (authRequired) {
-    await requireUserSession(event);
-  }
+  await assertApiKey(event);
 }
 
 /** 当前受管 provider：KV 运行时设置 ∩ env 允许列表；无 KV 设置时取 env 允许列表 */

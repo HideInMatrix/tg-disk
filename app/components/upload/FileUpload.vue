@@ -20,7 +20,7 @@ interface FileUploadProps {
 
 const { ready, loggedIn } = useUserSession();
 const config = useRuntimeConfig();
-const authRequired = computed(() => Boolean(config.public.account && config.public.password));
+const authRequired = computed(() => config.public.authRequired);
 const r2Enabled = useR2Enabled();
 
 const props = defineProps<FileUploadProps>();

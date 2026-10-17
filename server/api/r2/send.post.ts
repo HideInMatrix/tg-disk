@@ -1,12 +1,9 @@
 // POST /api/r2/send — 通过绑定或 S3 上传文件到 Cloudflare R2（S3 兼容 API）
 export default defineEventHandler(async (event) => {
+  // 鉴权异常必须返回真实 HTTP 401/503，不能被下方上传错误处理转换成 HTTP 200。
+  await assertApiKey(event);
   try {
     if (!isR2Enabled(event)) throw createError({ statusCode: 503, message: "R2 未配置" });
-
-    // 写入自己的存储桶属敏感操作：配置了账号密码时要求登录
-    const config = useRuntimeConfig(event);
-    const authRequired = Boolean(config.public.account && config.public.password);
-    if (authRequired) await requireUserSession(event);
 
     const form = await readMultipartFormData(event);
     const filePart = form?.find((p) => p.name === "file");

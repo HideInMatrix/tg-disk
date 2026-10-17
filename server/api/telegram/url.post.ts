@@ -2,6 +2,7 @@ import { defaultHeaders } from "~~/server/utils/defaultInfo";
 import { fetchTelegramWithRetry, getFileInfo } from "~~/server/utils/telegram";
 
 export default defineEventHandler(async (event) => {
+  await assertApiKey(event);
   try {
     // 1. 读取表单数据
     const body = await readFormData(event);

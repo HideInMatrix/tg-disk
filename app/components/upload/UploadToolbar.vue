@@ -22,7 +22,7 @@ const emit = defineEmits(["retry", "clearAll", "clearSuccess", "update:uploadDis
 const dropdownOpen = ref(false);
 const copyType = ref<CopyType>("markdown");
 const concurrencyLocal = ref(props.concurrency ?? 3);
-const authRequired = computed(() => Boolean(config.public.account && config.public.password));
+const authRequired = computed(() => config.public.authRequired);
 
 function updateConcurrency(v: number) {
   concurrencyLocal.value = v;

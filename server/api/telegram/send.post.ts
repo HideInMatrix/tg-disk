@@ -7,6 +7,7 @@ import {
 import { withUpload } from "~~/server/utils/concurrency";
 
 export default defineEventHandler(async (event) => {
+  await assertApiKey(event);
   try {
     const body = await readFormData(event);
     const config = useRuntimeConfig();

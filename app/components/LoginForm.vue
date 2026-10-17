@@ -5,33 +5,25 @@ import { Label } from "@/components/ui/label";
 import { Eye, EyeOff } from "lucide-vue-next";
 import { toast } from "vue-sonner";
 
-const formData = ref({
-  account: "",
-  password: "",
-});
-
-const showPassword = ref(false);
+const apiKey = ref("");
+const showKey = ref(false);
 const isSubmitting = ref(false);
 const { fetch: fetchUserSession } = useUserSession();
 
-const handleLogin = async () => {
-  if (isSubmitting.value) return;
-
+async function handleLogin() {
+  if (isSubmitting.value || !apiKey.value) return;
   isSubmitting.value = true;
   try {
-    const resp = await $fetch("/api/auth", { method: "POST", body: { ...formData.value } });
-    if (resp.code === 200) {
-      await fetchUserSession();
-      await navigateTo("/");
-    } else {
-      toast("登录失败，请检查账号密码", {
-        description: "账号或密码错误，请重试",
-      });
-    }
+    await $fetch("/api/auth", { method: "POST", body: { apiKey: apiKey.value } });
+    apiKey.value = "";
+    await fetchUserSession();
+    await navigateTo("/");
+  } catch {
+    toast.error("验证失败，请检查 API Key 或服务端配置");
   } finally {
     isSubmitting.value = false;
   }
-};
+}
 </script>
 
 <template>
@@ -39,32 +31,22 @@ const handleLogin = async () => {
     <div class="flex items-center justify-center py-12 h-full">
       <div class="mx-auto grid w-[350px] gap-6">
         <div class="grid gap-2 text-center">
-          <h1 class="text-3xl font-bold">登录</h1>
-          <p class="text-balance text-muted-foreground">输入你的邮箱账号</p>
+          <h1 class="text-3xl font-bold">API Key 验证</h1>
+          <p class="text-balance text-muted-foreground">请输入部署者在服务端 .env 中设置的 API Key</p>
         </div>
-        <form @submit.prevent="handleLogin" method="post" class="grid gap-4">
+        <form @submit.prevent="handleLogin" class="grid gap-4">
           <div class="grid gap-2">
-            <Label for="email">邮箱</Label>
-            <Input v-model="formData.account" id="email" type="email" placeholder="m@example.com" required />
-          </div>
-          <div class="grid gap-2">
-            <div class="flex items-center">
-              <Label for="password">密码</Label>
-            </div>
+            <Label for="api-key">API Key</Label>
             <div class="relative">
-              <Input v-model="formData.password" :type="showPassword ? 'text' : 'password'" id="password" placeholder="输入密码" required class="pr-10" />
-              <button
-                type="button"
-                @click="showPassword = !showPassword"
-                class="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors"
-                :aria-label="showPassword ? '隐藏密码' : '显示密码'">
-                <Eye v-if="showPassword" class="h-4 w-4" />
+              <Input v-model="apiKey" id="api-key" :type="showKey ? 'text' : 'password'" autocomplete="off" placeholder="输入 API Key" required class="pr-10" />
+              <button type="button" @click="showKey = !showKey" class="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500" :aria-label="showKey ? '隐藏 Key' : '显示 Key'">
+                <Eye v-if="showKey" class="h-4 w-4" />
                 <EyeOff v-else class="h-4 w-4" />
               </button>
             </div>
           </div>
           <Button type="submit" class="w-full cursor-pointer" :disabled="isSubmitting">
-            {{ isSubmitting ? "登录中..." : "登录" }}
+            {{ isSubmitting ? "验证中..." : "验证并进入" }}
           </Button>
         </form>
       </div>

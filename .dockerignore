@@ -1,0 +1,22 @@
+# Never include local secrets or Git history in Docker build context
+.env
+.env.*
+!.env.example
+.git
+.github
+
+# Generated outputs, dependencies, logs and editor files
+node_modules
+.nuxt
+.output
+.nitro
+.cache
+.data
+dist
+coverage
+logs
+*.log
+.DS_Store
+.vscode
+.idea
+.fleet
