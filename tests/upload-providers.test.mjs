@@ -277,18 +277,14 @@ test("public status uses the current request binding rather than global configur
   assert.equal(handler({ context: {} }).data.r2Enabled, false);
 });
 
-test("multipart upload propagates event and preserves login enforcement", async () => {
+test("multipart upload propagates event and enforces API key authentication", async () => {
   const event = boundEvent(mockBucket());
   const data = Buffer.from("hello");
   const calls = [];
   const handler = loadModule("server/api/r2/send.post.ts", {}, {
     defineEventHandler: (handler) => handler,
     isR2Enabled: (current) => { assert.equal(current, event); return true; },
-    useRuntimeConfig: (current) => {
-      assert.equal(current, event);
-      return { public: { account: "user", password: "password" } };
-    },
-    requireUserSession: async (current) => { assert.equal(current, event); calls.push("auth"); },
+    assertApiKey: async (current) => { assert.equal(current, event); calls.push("auth"); },
     readMultipartFormData: async () => [{ name: "file", filename: "hello.txt", type: "text/plain", data }],
     crypto: { randomUUID: () => "uuid" },
     r2Put: async (key, body, type, current) => {

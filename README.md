@@ -75,7 +75,23 @@ NUXT_SESSION_PASSWORD=请自行填写不同的长随机字符串
 
 ### 配置参数
 
-点击项目进入设置->变量和机密->添加.env.example里的参数->重新部署
+1. 构建命令使用 `pnpm run build`，构建输出目录为 `dist`（Pages 环境自动选择 `cloudflare_pages` preset）。
+2. 设置 → 变量和机密：按 `.env.example` 配置。`NUXT_API_KEY` 与 `NUXT_SESSION_PASSWORD` 必须作为 Secret 配置，至少 32 字符。
+3. **设置 → 运行时 → 兼容性标志：添加 `nodejs_compat`**。本项目 API Key 校验使用 `node:crypto` 的 `timingSafeEqual`；使用 `2025-12-06` 等兼容日期时，未开启此标志会在 Function 发布阶段报 `No such module "node:crypto"`。保留现有兼容日期即可，无需额外安装 `crypto` 包。
+4. 设置 → 绑定：保留已配置的 R2 存储桶绑定（见下文）。
+5. 保存后重新部署，在部署详情确认发布成功；仅看到 `Assets published` 不表示 Function 已发布。
+
+生产和预览环境的兼容标志分别配置。为保留面板中的变量、密钥和桶绑定，本仓库不启用 Nitro `cloudflare.deployConfig`，也不新增接管生产配置的 Wrangler 文件。官方说明：[Node.js 兼容模式](https://developers.cloudflare.com/workers/runtime-apis/nodejs/#get-started)、[Pages 配置迁移注意事项](https://developers.cloudflare.com/pages/functions/wrangler-configuration/#migrate-from-dashboard-configuration)。
+
+发布前本地验证：
+
+```bash
+pnpm test
+NITRO_PRESET=cloudflare_pages pnpm build
+pnpm test:pages-r2
+```
+
+最后一项使用测试专用 API Key 和内存桶，不访问生产 R2，验证状态接口、SSR hydration、登录、上传鉴权与私有桶读取。Node 下的模拟测试不能替代 Cloudflare 运行时兼容检查，发布仍须确认面板里的 `nodejs_compat`。
 
 ## （可选）Cloudflare D1 + KV 文件索引与后台管理
 

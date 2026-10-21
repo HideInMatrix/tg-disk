@@ -7,9 +7,27 @@ const overrides = Object.fromEntries([
   "NUXT_PUBLIC_ALLOW_REFERERS", "NUXT_R2_ACCESS_KEY_ID", "NUXT_R2_SECRET_ACCESS_KEY",
   "NUXT_CF_ACCOUNT_ID", "NUXT_CF_API_TOKEN",
 ].map((name) => [name, ""]));
+// Test-only values, never read production credentials or send requests to a real bucket.
+overrides.NUXT_API_KEY = "tg-disk-smoke-test-api-key-not-for-production";
+overrides.NUXT_SESSION_PASSWORD = "tg-disk-smoke-session-key-not-for-production";
 Object.assign(process.env, overrides);
 const { default: worker } = await import("../dist/_worker.js/index.js");
 const context = { waitUntil() {}, passThroughOnException() {} };
+const login = await worker.fetch(new Request("https://example.test/api/auth", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ apiKey: overrides.NUXT_API_KEY }),
+}), overrides, context);
+assert.equal(login.status, 200);
+assert.equal((await login.json()).code, 200);
+assert.match(login.headers.get("Set-Cookie") || "", /HttpOnly/i);
+const invalidLogin = await worker.fetch(new Request("https://example.test/api/auth", {
+  method: "POST",
+  headers: { "Content-Type": "application/json", accept: "application/json" },
+  body: JSON.stringify({ apiKey: "invalid" }),
+}), overrides, context);
+assert.equal(invalidLogin.status, 401);
+console.log("Built Pages worker: valid login/session cookie and rejected invalid API key passed");
 
 // The upload toolbar is ClientOnly, but its status is hydrated from the home page's SSR payload.
 // Direct API checks alone miss a nested SSR fetch losing the Cloudflare request context.
@@ -53,7 +71,14 @@ for (const name of ["NUXT_R2_BUCKET", "R2_BUCKET"]) {
 
   const form = new FormData();
   form.append("file", new File(["binding-test"], "test.txt", { type: "text/plain" }));
-  const upload = await fetch("/api/r2/send", { method: "POST", body: form });
+  const unauthorized = await fetch("/api/r2/send", {
+    method: "POST", body: form, headers: { accept: "application/json" },
+  });
+  assert.equal(unauthorized.status, 401);
+  assert.equal(objects.size, 0, "Rejected uploads must not write to R2");
+  const upload = await fetch("/api/r2/send", {
+    method: "POST", body: form, headers: { "X-API-Key": overrides.NUXT_API_KEY },
+  });
   const result = await upload.json();
   assert.equal(result.code, 200);
   assert.ok(objects.has(result.data.file_id));
