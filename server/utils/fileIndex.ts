@@ -45,7 +45,7 @@ function parseRow(row: FileRow): FileRecord {
   };
 }
 
-/** 校验功能启用（503）+ 鉴权（authRequired 时要求登录，401）——沿用现有可选鉴权 idiom */
+/** 校验功能启用（503）+ 账号密码会话或 API Key 鉴权（401）。 */
 export async function assertFileIndex(event: H3Event): Promise<void> {
   if (!isFileIndexEnabled()) {
     throw createError({ statusCode: 503, message: "文件索引未启用" });

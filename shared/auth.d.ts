@@ -1,17 +1,17 @@
 // auth.d.ts
 declare module '#auth-utils' {
   interface User {
-    // Add your own fields
-    account:string
-    password:string
+    login: "admin"
   }
 
   interface UserSession {
-    // Add your own fields
+    loggedInAt?: string | Date
   }
 
   interface SecureSessionData {
-    // Add your own fields
+    accountAuth?: boolean
+    // 兼容旧版账号密码会话；不会在浏览器会话响应中返回。
+    apiToken?: string
   }
 }
 

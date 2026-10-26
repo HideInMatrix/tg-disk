@@ -39,18 +39,21 @@ Manage Channel -> administrators -> 开启除了Add New admins之外的所有权
 频道 ID 前面有 - 号时需要保留
 Bot 必须具有频道管理员权限
 
-## API Key 认证（必填）
+## 网页登录与 API Key 认证
 
-在服务器的 `.env`（Cloudflare Pages 则在变量和机密中设置为 Secret）配置 `NUXT_API_KEY`，至少 32 字符，由部署者自行生成并保管。请勿使用 `NUXT_PUBLIC_` 前缀、提交到 Git 或写进前端代码。另为网页会话设置独立的 `NUXT_SESSION_PASSWORD`（至少 32 字符）。
+网页登录使用账号密码，第三方平台 / Agent / 脚本使用独立的 API Key，两种方式互不依赖。在服务器 `.env`（Cloudflare Pages 则在变量和机密中设置为 Secret）配置：
 
 ```dotenv
-NUXT_API_KEY=请自行填写至少32字符的私密APIKey
+NUXT_ACCOUNT=请自行填写登录账号
+NUXT_PASSWORD=请自行填写登录密码
 NUXT_SESSION_PASSWORD=请自行填写不同的长随机字符串
+# 可选，仅第三方接口调用需要，至少32字符
+NUXT_API_KEY=请自行填写至少32字符的私密APIKey
 ```
 
-浏览器访问 `/login`，输入 API Key 验证后获得安全的服务端会话（不会将 Key 保存在数据库或浏览器本地存储中）。外部 Agent / 脚本可直接通过请求头 `X-API-Key: <你的 API Key>` 调用上传和文件管理 API。**不要把 API Key 放进公开分发的客户端应用或第三方网页。**
+浏览器访问 `/login`，输入账号密码后获得会话 Cookie，上传与文件管理使用该 Cookie，不需要 API Key。外部程序直接通过请求头 `X-API-Key: <你的 API Key>` 调用接口，无需登录。API Key 不能用于 `/api/auth` 换取网页登录会话。**不要把 API Key 放进公开分发的客户端应用或第三方网页。**
 
-旧的 `NUXT_PUBLIC_ACCOUNT`、`NUXT_PUBLIC_PASSWORD` 已停用，应从部署环境中删除。未配置有效 Key 时敏感接口拒绝操作；修改 Key 后请重新部署并重新登录。请确保全站通过 HTTPS 提供服务。会话 Cookie 仍可以在有效期内使用；如需立刻撤销现有会话，还应轮换 `NUXT_SESSION_PASSWORD`。
+旧的 `NUXT_PUBLIC_ACCOUNT`、`NUXT_PUBLIC_PASSWORD` 仍兼容读取，但只进入服务端配置，不再写入浏览器运行时配置；推荐迁移到 `NUXT_ACCOUNT`、`NUXT_PASSWORD`。`NUXT_SESSION_PASSWORD` 至少 32 字符。未配置 API Key 不影响账号密码登录；未登录且没有有效 API Key 时，敏感接口拒绝操作。请确保全站使用 HTTPS，修改配置后重新部署。如需立刻撤销已有会话，还应轮换 `NUXT_SESSION_PASSWORD`。
 
 ## .env.example
 
@@ -76,7 +79,7 @@ NUXT_SESSION_PASSWORD=请自行填写不同的长随机字符串
 ### 配置参数
 
 1. 构建命令使用 `pnpm run build`，构建输出目录为 `dist`（Pages 环境自动选择 `cloudflare_pages` preset）。
-2. 设置 → 变量和机密：按 `.env.example` 配置。`NUXT_API_KEY` 与 `NUXT_SESSION_PASSWORD` 必须作为 Secret 配置，至少 32 字符。
+2. 设置 → 变量和机密：按 `.env.example` 配置账号密码和 `NUXT_SESSION_PASSWORD`；按需设置第三方接口的 `NUXT_API_KEY`。密码和密钥使用 Secret，会话密钥和 API Key 至少 32 字符。
 3. **设置 → 运行时 → 兼容性标志：添加 `nodejs_compat`**。本项目 API Key 校验使用 `node:crypto` 的 `timingSafeEqual`；使用 `2025-12-06` 等兼容日期时，未开启此标志会在 Function 发布阶段报 `No such module "node:crypto"`。保留现有兼容日期即可，无需额外安装 `crypto` 包。
 4. 设置 → 绑定：保留已配置的 R2 存储桶绑定（见下文）。
 5. 保存后重新部署，在部署详情确认发布成功；仅看到 `Assets published` 不表示 Function 已发布。
@@ -91,7 +94,9 @@ NITRO_PRESET=cloudflare_pages pnpm build
 pnpm test:pages-r2
 ```
 
-最后一项使用测试专用 API Key 和内存桶，不访问生产 R2，验证状态接口、SSR hydration、登录、上传鉴权与私有桶读取。Node 下的模拟测试不能替代 Cloudflare 运行时兼容检查，发布仍须确认面板里的 `nodejs_compat`。
+最后一项使用测试专用账号密码、API Key 和内存桶，不访问生产 R2，验证状态接口、SSR hydration、账号密码登录、Cookie / API Key 上传鉴权与私有桶读取。Node 下的模拟测试不能替代 Cloudflare 运行时兼容检查，发布仍须确认面板里的 `nodejs_compat`。
+
+上传使用当前站点的相对路径 `/api/telegram/send`，没有固定的 Pages 域名。通过 CDN / 反向代理访问自定义域名时，错误 JSON 中的 `url` 可能是回源 Host 对应的 Pages 地址；实际浏览器请求以开发者工具 Network 中的 Request URL 为准。`NUXT_PUBLIC_ALLOW_HOSTS` 是文件访问白名单，不用于指定上传地址。
 
 ## （可选）Cloudflare D1 + KV 文件索引与后台管理
 
@@ -124,7 +129,7 @@ pnpm test:pages-r2
    ```
 7. 重启应用。登录后首页右上角出现「文件管理」入口（`/files`）。
 
-> 四项 `NUXT_CF_*` 都配置才会启用。文件管理和上传写入接口必须通过 `NUXT_API_KEY` 验证，不会因未配置 API Key 而允许匿名写入。
+> 四项 `NUXT_CF_*` 都配置才会启用。文件管理和上传写入接口要求账号密码登录会话或有效的 `X-API-Key`，不会因未配置 API Key 而允许匿名写入。
 
 ### 说明与限制
 
@@ -187,25 +192,26 @@ pnpm test:pages-r2
 
 #### POST `/api/auth`
 
-浏览器会话验证接口，使用部署者自行在服务端设置的 API Key。
+浏览器账号密码登录接口，使用服务端配置的账号密码；API Key 仅用于第三方接口请求头。
 
 **请求参数：**
 
 ```json
 {
-  "apiKey": "YOUR_API_KEY"
+  "account": "YOUR_ACCOUNT",
+  "password": "YOUR_PASSWORD"
 }
 ```
 
 **响应参数：**
 
 - 验证成功（HTTP 200）：`{ "code": 200, "data": true }`
-- Key 不正确：HTTP 401
-- 服务端未配置有效 Key：HTTP 503
+- 账号或密码不正确：HTTP 401
+- 服务端未配置账号密码：HTTP 503
 
 **说明：**
 
-- `NUXT_API_KEY` 为服务端私有配置，不写入数据库、不暴露给浏览器运行时配置。
+- 账号、密码与 `NUXT_API_KEY` 都是服务端私有配置，不写入数据库、不暴露给浏览器运行时配置。
 - 外部程序使用 `X-API-Key` 请求头调用上传和文件管理接口，无需通过 `/api/auth` 登录。
 - Telegram Bot Token 仍从服务端私有变量 `NUXT_TG_TOKEN` 获取。
 - 登录成功后设置有效期 7 天的会话；轮换密钥后要立即失效已有会话时，同时轮换 `NUXT_SESSION_PASSWORD`。
@@ -232,6 +238,7 @@ pnpm test:pages-r2
 
 ```bash
 curl -X POST http://localhost:3000/api/telegram/send \
+  -H "X-API-Key: YOUR_API_KEY" \
   -F "file=@/path/to/file.pdf" \
   -F "fileName=document.pdf" \
   -F "chatId=-1234567890123" \

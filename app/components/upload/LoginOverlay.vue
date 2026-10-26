@@ -3,7 +3,7 @@
     <div class="absolute inset-0 bg-transform rounded-lg flex items-center justify-center z-40 backdrop-blur-sm">
       <div class="bg-white dark:bg-neutral-900 rounded-lg p-6 shadow-lg text-center max-w-sm">
         <p class="text-lg font-bold text-neutral-900 dark:text-white mb-2">需要登录</p>
-        <p class="text-sm text-neutral-600 dark:text-neutral-400 mb-4">使用存储服务前，请输入部署时配置的 API Key</p>
+        <p class="text-sm text-neutral-600 dark:text-neutral-400 mb-4">使用存储服务前，请先使用账号密码登录</p>
         <NuxtLink @click.stop="() => {}" to="/login" class="inline-block px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition"> 前往登录 </NuxtLink>
       </div>
     </div>

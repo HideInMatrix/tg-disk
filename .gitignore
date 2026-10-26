@@ -8,6 +8,10 @@ dist
 
 # Node dependencies
 node_modules
+.pnpm-store/
+
+# Local tests
+/tests/
 
 # Logs
 logs

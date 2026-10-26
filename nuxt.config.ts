@@ -25,6 +25,9 @@ export default defineNuxtConfig({
   runtimeConfig: {
     tgToken: process.env.NUXT_TG_TOKEN || process.env.NUXT_PUBLIC_TG_TOKEN,
     apiKey: process.env.NUXT_API_KEY || "",
+    // 兼容旧部署变量，但只放在服务端配置，绝不暴露到 public。
+    account: process.env.NUXT_ACCOUNT || process.env.NUXT_PUBLIC_ACCOUNT || "",
+    password: process.env.NUXT_PASSWORD || process.env.NUXT_PUBLIC_PASSWORD || "",
     // 可选：Cloudflare D1 + KV 文件索引（运行时可被 NUXT_CF_* 覆盖；不暴露给客户端）
     cf: {
       accountId: process.env.NUXT_CF_ACCOUNT_ID,
