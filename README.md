@@ -98,6 +98,20 @@ pnpm test:pages-r2
 
 上传使用当前站点的相对路径 `/api/telegram/send`，没有固定的 Pages 域名。通过 CDN / 反向代理访问自定义域名时，错误 JSON 中的 `url` 可能是回源 Host 对应的 Pages 地址；实际浏览器请求以开发者工具 Network 中的 Request URL 为准。`NUXT_PUBLIC_ALLOW_HOSTS` 是文件访问白名单，不用于指定上传地址。
 
+## 多图读取与 Telegram 代理超时
+
+`/file/<file_id>` 每次冷读取需要先调用 Telegram `getFile`，再下载正文；多图页面会放大上游延迟。代理不再使用跨请求的全局下载等待队列，避免在 Pages isolate 内让不同图片请求互相阻塞。已完成的文件路径按 Bot 隔离，在当前实例内缓存 45 分钟（最多 512 条）；缓存路径失效时只刷新一次，不做长时间反复重试。
+
+- 文件信息请求最多 15 秒；下载最多 30 秒，超时覆盖响应头和正文消费，浏览器取消时也取消上游。
+- Pages 下载通过 `fetch` 的 `cf.cacheEverything` / `cacheTtlByStatus` 请求缓存成功的上游响应一天；错误响应不缓存。首次访问、不同缓存节点或缓存未命中仍需回源，不保证命中缓存。
+- 图片正文保持流式传输，不把整张图片缓存在 Worker 内存中，不跨请求共享 Response、Stream 或进行中的 I/O Promise。
+- 保留原有 Host / Referer 防盗链中间件，缓存命中也不能跳过访问检查。不要为加速给整个站点设置 Cache Everything，尤其不要缓存登录、上传及文件管理 API。
+- 响应头 `X-TG-Metadata-Cache` 为 `MISS/HIT/REFRESH`；`Server-Timing` 显示 `tg_meta`（文件信息）和 `tg_headers`（下载响应头）耗时；上游提供缓存标记时转发为 `X-TG-Upstream-Cache`，不暴露 Bot Token。
+
+上游错误在响应头发出前返回 502 / 503 / 504；若正文流已经开始传输再超时，只能中断流，无法把已经发出的 200 改为 504。524 表示代理等待上游超时，不能仅凭状态码断定是哪一跳；排查时保存图片 URL、引用页、耗时、`CF-Ray` 及上述诊断头。
+
+官方说明：[Cloudflare 524](https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-524/)、[Worker fetch 缓存](https://developers.cloudflare.com/workers/examples/cache-using-fetch/)、[Telegram getFile](https://core.telegram.org/bots/api#getfile)。
+
 ## （可选）Cloudflare D1 + KV 文件索引与后台管理
 
 默认情况下上传结果只保留在当前页面，刷新即丢失。配置 Cloudflare D1 + KV 后，会记录每次上传的元数据，并在 `/files` 提供后台管理（浏览、搜索、分页、预览、复制直链、删除、重命名、标签）。**不配置则对现有功能零影响。**
